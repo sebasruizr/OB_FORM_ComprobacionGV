@@ -58,7 +58,7 @@ Se muestran en la marca de agua al pie del Formulario
 10/05/2019 18:41 = Sebastian Ruiz - Ajuste JS para discriminar los impuestos trasladados de la factura siempre igual a 002 correspondiente a IVA y omitir otros impuestos como IEPS
 14/05/2019 16:08 = Sebastian Ruiz - Ajuste JS para controlar en Tipo Gastos 10 (Renta de Auto) si la factura tiene IVA en 0, no realice el calculo de IVA Acreditable por monto o porcentaje
 */
-var versionJS = '01/09/2020 18:11 '; //Ultima modificación de este archivo JS 
+var versionJS = '02/09/2020 18:47 '; //Ultima modificación de este archivo JS 
 var versionFormOB = 'V 1.0 09052018'; //Ultima versión del SYS HTML FORM asignado a DT en OnBase
 
 //Los siguientes arrays son cargados en memoria en cada carga del formulario para control de las funciones de mas adelante
@@ -2060,225 +2060,253 @@ function sumaMontos(tipoGasto)
 
 	//var arrpol_rest = pol_rest.split('-');
 
-	//La validación por cada Comprobante de cada tipo de gasto se realiza a continuación, se tiene en un Switch Case y con codigo repetido debido a que en el usuario dijo en todo momento que cada tipo de gasto tiene distintas validaciones y distintas reglas que determinarian que sea deducible o no, por lo que se determinó que cada tipo de gasto fuera un case distinto
-	//Sin embargo al termino del desarrollo de este formulario (Mayo-2018) todos los casos conllevan el mismo tratamiento, por lo que solo encontrará comentado el codigo del Tipo de gasto 1
-
-	switch(tipoG)
+	for(var i = 1; i<= countFact; i++) //Recorre todos los comprobantes del tipo de gasto
 	{
-		//Validaciones Fiscales y determinación de montos deducibles para Tipo Gasto 1 (Hospedaje)
-		case 1:
-			for(var i = 1; i<= countFact; i++) //Recorre todos los comprobantes del tipo de gasto
+		//Obtiene datos generales del comprobante a partir de los campos creados en el cuerpo del fomulario. No de KW: Handle, Tipo Comprobante (CFDI, IMG, SCOMP), SubTotal, Total, IVA, Tipo principal de Pago, Cantidad de Conceptos en el caso de CFDI, Desgloce de Conceptos en caso de haber conceptos con Tipo de Gasto distinto al del CFDI
+		handle = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_handle').value;
+		tipoFact = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tipoFact').value;
+		totalFact = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_totFact').value);
+		subtot = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_subtotFact').value);
+		iva = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaFact').value);
+		tipoPago = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tPago').value;
+		cantItems = parseInt(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_cantItems').value, 10);
+		desgloce = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_desgloce').value;
+		//Obtiene datos particulaes del comprobante con respecto al Tipo de Gasto a partir de los campos creados en el cuerpo del fomulario. No de KW: Cant Noches
+		noches = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_noches').value);
+
+		var otro_subtot = 0;
+		var otro_iva = 0;
+		if(desgloce!='') //Evalua si existe separación de conceptos del CFDI
+		{
+			subtot = 0;
+			iva = 0;
+			for(r=1;r<=250;r++) //Recorrera cada concepto del CFDI... En este caso particular si va directo a los inputs del HTML que corresponden a los valores de KW del KWTG FE - Conceptos
 			{
-				//Obtiene datos generales del comprobante a partir de los campos creados en el cuerpo del fomulario. No de KW: Handle, Tipo Comprobante (CFDI, IMG, SCOMP), SubTotal, Total, IVA, Tipo principal de Pago, Cantidad de Conceptos en el caso de CFDI, Desgloce de Conceptos en caso de haber conceptos con Tipo de Gasto distinto al del CFDI
-				handle = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_handle').value;
-				tipoFact = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tipoFact').value;
-				totalFact = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_totFact').value);
-				subtot = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_subtotFact').value);
-				iva = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaFact').value);
-				tipoPago = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tPago').value;
-				cantItems = parseInt(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_cantItems').value, 10);
-				desgloce = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_desgloce').value;
-				//Obtiene datos particulaes del comprobante con respecto al Tipo de Gasto a partir de los campos creados en el cuerpo del fomulario. No de KW: Cant Noches
-				noches = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_noches').value);
-
-				var otro_subtot = 0;
-				var otro_iva = 0;
-				if(desgloce!='') //Evalua si existe separación de conceptos del CFDI
+				handleItem = document.getElementById('OBKey__572_'+r).value;
+				if(handleItem!='')//Asegura que el Handle del Registro del KWTG FE - Conceptos no este vacio
 				{
-					subtot = 0;
-					iva = 0;
-					for(r=1;r<=250;r++) //Recorrera cada concepto del CFDI... En este caso particular si va directo a los inputs del HTML que corresponden a los valores de KW del KWTG FE - Conceptos
+					if(handleItem==handle) //Valida que el Handle del Concepto corresponda al mismo handle del Comprobante principal
 					{
-						handleItem = document.getElementById('OBKey__572_'+r).value;
-						if(handleItem!='')//Asegura que el Handle del Registro del KWTG FE - Conceptos no este vacio
+						tGastoItem = document.getElementById('OBKey__620_'+r).value;
+
+						if(tipoGasto==tGastoItem) //Valida si el Tipo de Gasto del Concepto encontrado con el mismo Handle es igual al Tipo de Gasto del CFDI principal
 						{
-							if(handleItem==handle) //Valida que el Handle del Concepto corresponda al mismo handle del Comprobante principal
+							subtot = subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
+							tmp_iva = document.getElementById('OBKey__504_'+r).value;
+							if(tmp_iva!='') //Valida que el concepto encontrado contenga IVA
 							{
-								tGastoItem = document.getElementById('OBKey__620_'+r).value;
-
-								if(tipoGasto==tGastoItem) //Valida si el Tipo de Gasto del Concepto encontrado con el mismo Handle es igual al Tipo de Gasto del CFDI principal
-								{
-									subtot = subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									tmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(tmp_iva!='') //Valida que el concepto encontrado contenga IVA
-									{
-										iva = iva + parseFloat(tmp_iva); //Suma el monto del IVA en Acumulador principal de IVA
-									}
-								}
-								else //Caso contrario en que el Concepto no corresponda al mismo Tipo de Gasto que el CFDI
-								{
-									otro_subtot = otro_subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									otrotmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(otrotmp_iva!='') //Valida que el concepto encontrado contenga IVA
-									{
-										otro_iva = otro_iva + parseFloat(otrotmp_iva); //Suma el monto del IVA en Acumulador alterno de IVA
-									}
-								}
-
+								iva = iva + parseFloat(tmp_iva); //Suma el monto del IVA en Acumulador principal de IVA
 							}
 						}
-						else //Si el Handle esta vacio, deja de continuar recorriendo los Records del KWTG FE - Conceptos 
+						else //Caso contrario en que el Concepto no corresponda al mismo Tipo de Gasto que el CFDI
 						{
-							break;
+							otro_subtot = otro_subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
+							otrotmp_iva = document.getElementById('OBKey__504_'+r).value;
+							if(otrotmp_iva!='') //Valida que el concepto encontrado contenga IVA
+							{
+								otro_iva = otro_iva + parseFloat(otrotmp_iva); //Suma el monto del IVA en Acumulador alterno de IVA
+							}
 						}
+
 					}
 				}
-
-				var subtotDed = 0;
-				var subtotNoDed = 0;
-				var ivaAcred = 0;
-				var ivaNoAcred = 0;
-
-				var subtotDed8 = 0;
-				var subtotNoDed8 = 0;
-				var ivaAcred8 = 0;
-				var ivaNoAcred8 = 0;
-
-				var subtotDed0 = 0;
-				var subtotNoDed0 = 0;
-				var ivaAcred0 = 0;
-				var ivaNoAcred0 = 0;
-
-				var unidadPorcentaje = 0;
-
-
-				/*========================================
-				Inicia TEMP Divide IVAs
-				==========================================*/
-
-				var subTot16 = 0.0;
-				var subTot8 = 0.0;
-				var	subTot0 = 0.0;
-				var mtoIva16 = 0.0;
-				var mtoIva8 = 0.0;
-				var mtoIva0 = 0.0;
-
-				for(r=1;r<=250;r++) //Recorrera cada concepto del CFDI... En este caso particular si va directo a los inputs del HTML que corresponden a los valores de KW del KWTG FE - Conceptos
+				else //Si el Handle esta vacio, deja de continuar recorriendo los Records del KWTG FE - Conceptos 
 				{
-					handleItem = document.getElementById('OBKey__572_'+r).value;
-					if(handleItem!='')//Asegura que el Handle del Registro del KWTG FE - Conceptos no este vacio
+					break;
+				}
+			}
+		}
+
+		var subtotDed = 0;
+		var subtotNoDed = 0;
+		var ivaAcred = 0;
+		var ivaNoAcred = 0;
+
+		var subtotDed8 = 0;
+		var subtotNoDed8 = 0;
+		var ivaAcred8 = 0;
+		var ivaNoAcred8 = 0;
+
+		var subtotDed0 = 0;
+		var subtotNoDed0 = 0;
+		var ivaAcred0 = 0;
+		var ivaNoAcred0 = 0;
+
+		var unidadPorcentaje = 0;
+
+		/*========================================
+		Inicia TEMP Divide IVAs
+		==========================================*/
+
+		var subTot16 = 0.0;
+		var subTot8 = 0.0;
+		var	subTot0 = 0.0;
+		var mtoIva16 = 0.0;
+		var mtoIva8 = 0.0;
+		var mtoIva0 = 0.0;
+
+		for(r=1;r<=250;r++) //Recorrera cada concepto del CFDI... En este caso particular si va directo a los inputs del HTML que corresponden a los valores de KW del KWTG FE - Conceptos
+		{
+			handleItem = document.getElementById('OBKey__572_'+r).value;
+			if(handleItem!='')//Asegura que el Handle del Registro del KWTG FE - Conceptos no este vacio
+			{
+				if(handleItem==handle) //Valida que el Handle del Concepto corresponda al mismo handle del Comprobante principal
+				{
+					var tasa = document.getElementById('OBKey__505_'+r).value;
+					var cImporte = parseFloat(document.getElementById('OBKey__105_'+r)).value;
+					var tImporte = parseFloat(document.getElementById('OBKey__504_'+r)).value;
+
+					switch (tasa)
 					{
-						if(handleItem==handle) //Valida que el Handle del Concepto corresponda al mismo handle del Comprobante principal
-						{
-							var tasa = document.getElementById('OBKey__505_'+r).value;
-							var cImporte = parseFloat(document.getElementById('OBKey__105_'+r)).value;
-							var tImporte = parseFloat(document.getElementById('OBKey__504_'+r)).value;
+						case '0.16':
+							subTot16 += cImporte;
+							mtoIva16 += tImporte;
+						break;
 
-							switch (tasa)
-							{
-								case '0.16':
-									subTot16 += cImporte;
-									mtoIva16 += tImporte;
-								break;
+						case '0.08':
+							subTot8 += cImporte;
+							mtoIva8 += tImporte;
+						break;
 
-								case '0.08':
-									subTot8 += cImporte;
-									mtoIva8 += tImporte;
-								break;
-
-								case '0':
-									subTot0 += cImporte;
-									mtoIva0 += tImporte;
-								break;
-							}
-						}
-					}
-					else //Si el Handle esta vacio, deja de continuar recorriendo los Records del KWTG FE - Conceptos 
-					{
+						case '0':
+							subTot0 += cImporte;
+							mtoIva0 += tImporte;
 						break;
 					}
 				}
+			}
+			else //Si el Handle esta vacio, deja de continuar recorriendo los Records del KWTG FE - Conceptos 
+			{
+				break;
+			}
+		}
 
-				/*========================================
-				Inicia TEMP Divide IVAs
-				==========================================*/
+		console.log('subTot16 ' + subTot16);
+		console.log('subTot8 ' + subTot8);
+		console.log('subTot0 ' + subTot0);
+		console.log('mtoIva16 ' + mtoIva16);
+		console.log('mtoIva8 ' + mtoIva8);
+		console.log('mtoIva0 ' + mtoIva0);
 
-				if((tipoFact == 'IMG') || (tipoFact == 'SCOMP')) //Si el tipo de COmprobante es igual a IMG o SCOMP automaticamente se determina todo el comprobante como no deducible e IVA no acreditable
+		/*========================================
+		Inicia TEMP Divide IVAs
+		==========================================*/
+
+		if((tipoFact == 'IMG') || (tipoFact == 'SCOMP')) //Si el tipo de COmprobante es igual a IMG o SCOMP automaticamente se determina todo el comprobante como no deducible e IVA no acreditable
+		{
+			subtotDed = 0;
+			subtotNoDed = subtot; //El Subtotal del COmprobante se determina como No Deducible
+			ivaAcred = 0;
+			ivaNoAcred = iva; //En caso de existir IVA, se determina como no Acreditable
+		}
+		else //Caso contrario se considera como CFDI o un Concepto de CFDI (CCFDI)
+		{
+			if(tipoPago=='1') //Si el tipo de pago principal (EL DE MAYOR MONTO INGRESADO POR EL USUARIO EN EL PORTAL) es igual a 1 (Efectivo)
+			{
+				if(totalFact<=topeFisEfectivo) //Valida si el monto total del comprobante es menor al tipeFiscal obtenido del AFKS Pol - Campos diversos
+				{
+					if(pol_tFiscExt) //Evalua si para el tipo de gasto aplica validación de Tope Fiscal Extranjero (solo cuando la comprobación sea extranjera)	
+					{
+						if(pol_unidadFis=='PESOS') //Evalua si la unidad de control del Tope Fiscal es en PESOS
+						{
+							if(subtot>pol_TopeFiscExt) //Evalua si el subtotal del comprobante es mayor al Tope Fiscal aplicable
+							{
+								subtotDed = pol_TopeFiscExt; //Determina el monto del Tope Fiscal como cantidad deducible del gasto
+								subtotNoDed = subtot - pol_TopeFiscExt; //Resta el Tope Fiscal menos el subtotal del comprobante y eso se considera no deducible
+								ivaAcred = pol_TopeFiscExt * valorIva; //Multiplica el Tope Fiscal por la Tasa de IVA (Obtenida de AFKS - Campos diversos), eso se considera IVA Acreditable
+								ivaNoAcred = iva - ivaAcred; //Resta el IVA del COmprobante menos el IVA determinado como acreditable para definir la cantidad de IVA no Acreditable
+							}
+							else //En caso que el subtotal del comprobante no sea mayor al Tope Fiscal
+							{
+								subtotDed = subtot; //Se establece la totalidad del subtotal del comprobante como Deducible
+								subtotNoDed = 0; //No hay monto No Deducible en este caso
+								ivaAcred = iva; //Todo el IVA del Comprobante es Acreditable
+								ivaNoAcred = 0; //No hay monto de IVA No Acreditable
+							}
+						}
+						if(pol_unidadFis=='%') //Evalua si la unidad de control del Tope Fiscal es en porcentaje
+						{
+							subtotDed = subtot * pol_TopeFiscExt; //Multiplica el subtotal del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como deducible
+							subtotNoDed = subtot - subtotDed; //Resta el subtotal del Comprobante menos la parte deducible, para determinar la parte no deducible
+							ivaAcred = iva * pol_TopeFiscExt; //Multiplica el IVA del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como IVA Acreditable
+							ivaNoAcred = iva - ivaAcred; //Resta el IVA del comprobante menos el IVA Acreditable para obtener el IVA no Acreditable
+						}
+					}
+					else if(pol_tFiscNac) //Evalua si para el tipo de gasto aplica validación de Tope Fiscal nacional
+					{
+						if(pol_unidadFis=='PESOS') //Evalua si la unidad de control del Tope Fiscal es en PESOS
+						{
+							if(subtot>pol_TopeFiscNac) //Evalua si el subtotal del comprobante es mayor al Tope Fiscal aplicable
+							{
+								subtotDed = pol_TopeFiscNac; //Determina el monto del Tope Fiscal como cantidad deducible del gasto
+								subtotNoDed = subtot - pol_TopeFiscNac; //Resta el Tope Fiscal menos el subtotal del comprobante y eso se considera no deducible
+								ivaAcred = pol_TopeFiscNac * valorIva; //Multiplica el Tope Fiscal por la Tasa de IVA (Obtenida de AFKS - Campos diversos), eso se considera IVA Acreditable
+								ivaNoAcred = iva - ivaAcred; //Resta el IVA del COmprobante menos el IVA determinado como acreditable para definir la cantidad de IVA no Acreditable
+								
+								subtotDed8 = 0;
+								subtotNoDed8 = 0;
+								ivaAcred8 = 0;
+								ivaNoAcred8 = 0;
+
+								subtotDed0 = 0;
+								subtotNoDed0 = 0;
+								ivaAcred0 = 0;
+								ivaNoAcred0 = 0;
+
+								subTot16 = 0.0;
+								subTot8 = 0.0;
+								subTot0 = 0.0;
+								mtoIva16 = 0.0;
+								mtoIva8 = 0.0;
+								mtoIva0 = 0.0;
+							}
+							else //En caso que el subtotal del comprobante no sea mayor al Tope Fiscal
+							{
+								subtotDed = subtot; //Se establece la totalidad del subtotal del comprobante como Deducible
+								subtotNoDed = 0; //No hay monto No Deducible en este caso
+								ivaAcred = iva; //Todo el IVA del Comprobante es Acreditable
+								ivaNoAcred = 0; //No hay monto de IVA No Acreditable
+							}
+							
+						}
+						if(pol_unidadFis=='%') //Evalua si la unidad de control del Tope Fiscal es en porcentaje
+						{
+							subtotDed = subtot * pol_TopeFiscNac; //Multiplica el subtotal del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como deducible
+							subtotNoDed = subtot - subtotDed; //Resta el subtotal del Comprobante menos la parte deducible, para determinar la parte no deducible
+							ivaAcred = iva * pol_TopeFiscNac; //Multiplica el IVA del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como IVA Acreditable
+							ivaNoAcred = iva - ivaAcred; //Resta el IVA del comprobante menos el IVA Acreditable para obtener el IVA no Acreditable
+						}
+					}
+					else //En caso de no existir Tope Fiscal ni Nacional ni Extranjero para el tipo de gasto
+					{
+						subtotDed = subtot; //Se establece la totalidad del subtotal del comprobante como Deducible
+						subtotNoDed = 0; //No hay monto No Deducible en este caso
+						ivaAcred = iva; //Todo el IVA del Comprobante es Acreditable
+						ivaNoAcred = 0; //No hay monto de IVA No Acreditable
+					}
+				}
+				else //En caso que el monto total del comprobante ses mayor al Tope Fiscal de pago en Efectivo
 				{
 					subtotDed = 0;
 					subtotNoDed = subtot; //El Subtotal del COmprobante se determina como No Deducible
 					ivaAcred = 0;
-					ivaNoAcred = iva; //En caso de existir IVA, se determina como no Acreditable
+					ivaNoAcred = iva; //Todo el IVA se determina como No Acreditable
 				}
-				else //Caso contrario se considera como CFDI o un Concepto de CFDI (CCFDI)
-				{
-					if(tipoPago=='1') //Si el tipo de pago principal (EL DE MAYOR MONTO INGRESADO POR EL USUARIO EN EL PORTAL) es igual a 1 (Efectivo)
+			}
+			else //En caso que el Tipo de pago principal (EL DE MAYOR MONTO INGRESADO POR EL USUARIO EN EL PORTAL) sea distinto a Efectivo
+			{
+				if(pol_tFiscExt) //Evalua si para el tipo de gasto aplica validación de Tope Fiscal Extranjero (solo cuando la comprobación sea extranjera)	
 					{
-						if(totalFact<=topeFisEfectivo) //Valida si el monto total del comprobante es menor al tipeFiscal obtenido del AFKS Pol - Campos diversos
+						if(pol_unidadFis=='PESOS') //Evalua si la unidad de control del Tope Fiscal es en PESOS
 						{
-							if(pol_tFiscExt) //Evalua si para el tipo de gasto aplica validación de Tope Fiscal Extranjero (solo cuando la comprobación sea extranjera)	
+							if(subtot>pol_TopeFiscExt) //Evalua si el subtotal del comprobante es mayor al Tope Fiscal aplicable
 							{
-								if(pol_unidadFis=='PESOS') //Evalua si la unidad de control del Tope Fiscal es en PESOS
-								{
-									if(subtot>pol_TopeFiscExt) //Evalua si el subtotal del comprobante es mayor al Tope Fiscal aplicable
-									{
-										subtotDed = pol_TopeFiscExt; //Determina el monto del Tope Fiscal como cantidad deducible del gasto
-										subtotNoDed = subtot - pol_TopeFiscExt; //Resta el Tope Fiscal menos el subtotal del comprobante y eso se considera no deducible
-										ivaAcred = pol_TopeFiscExt * valorIva; //Multiplica el Tope Fiscal por la Tasa de IVA (Obtenida de AFKS - Campos diversos), eso se considera IVA Acreditable
-										ivaNoAcred = iva - ivaAcred; //Resta el IVA del COmprobante menos el IVA determinado como acreditable para definir la cantidad de IVA no Acreditable
-									}
-									else //En caso que el subtotal del comprobante no sea mayor al Tope Fiscal
-									{
-										subtotDed = subtot; //Se establece la totalidad del subtotal del comprobante como Deducible
-										subtotNoDed = 0; //No hay monto No Deducible en este caso
-										ivaAcred = iva; //Todo el IVA del Comprobante es Acreditable
-										ivaNoAcred = 0; //No hay monto de IVA No Acreditable
-									}
-								}
-								if(pol_unidadFis=='%') //Evalua si la unidad de control del Tope Fiscal es en porcentaje
-								{
-									subtotDed = subtot * pol_TopeFiscExt; //Multiplica el subtotal del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como deducible
-									subtotNoDed = subtot - subtotDed; //Resta el subtotal del Comprobante menos la parte deducible, para determinar la parte no deducible
-									ivaAcred = iva * pol_TopeFiscExt; //Multiplica el IVA del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como IVA Acreditable
-									ivaNoAcred = iva - ivaAcred; //Resta el IVA del comprobante menos el IVA Acreditable para obtener el IVA no Acreditable
-								}
+								subtotDed = pol_TopeFiscExt; //Determina el monto del Tope Fiscal como cantidad deducible del gasto
+								subtotNoDed = subtot - pol_TopeFiscExt; //Resta el Tope Fiscal menos el subtotal del comprobante y eso se considera no deducible
+								ivaAcred = pol_TopeFiscExt * valorIva; //Multiplica el Tope Fiscal por la Tasa de IVA (Obtenida de AFKS - Campos diversos), eso se considera IVA Acreditable
+								ivaNoAcred = iva - ivaAcred; //Resta el IVA del COmprobante menos el IVA determinado como acreditable para definir la cantidad de IVA no Acreditable
 							}
-							else if(pol_tFiscNac) //Evalua si para el tipo de gasto aplica validación de Tope Fiscal nacional
-							{
-								if(pol_unidadFis=='PESOS') //Evalua si la unidad de control del Tope Fiscal es en PESOS
-								{
-									if(subtot>pol_TopeFiscNac) //Evalua si el subtotal del comprobante es mayor al Tope Fiscal aplicable
-									{
-										subtotDed = pol_TopeFiscNac; //Determina el monto del Tope Fiscal como cantidad deducible del gasto
-										subtotNoDed = subtot - pol_TopeFiscNac; //Resta el Tope Fiscal menos el subtotal del comprobante y eso se considera no deducible
-										ivaAcred = pol_TopeFiscNac * valorIva; //Multiplica el Tope Fiscal por la Tasa de IVA (Obtenida de AFKS - Campos diversos), eso se considera IVA Acreditable
-										ivaNoAcred = iva - ivaAcred; //Resta el IVA del COmprobante menos el IVA determinado como acreditable para definir la cantidad de IVA no Acreditable
-										
-										subtotDed8 = 0;
-										subtotNoDed8 = 0;
-										ivaAcred8 = 0;
-										ivaNoAcred8 = 0;
-
-										subtotDed0 = 0;
-										subtotNoDed0 = 0;
-										ivaAcred0 = 0;
-										ivaNoAcred0 = 0;
-
-										subTot16 = 0.0;
-										subTot8 = 0.0;
-										subTot0 = 0.0;
-										mtoIva16 = 0.0;
-										mtoIva8 = 0.0;
-										mtoIva0 = 0.0;
-									}
-									else //En caso que el subtotal del comprobante no sea mayor al Tope Fiscal
-									{
-										subtotDed = subtot; //Se establece la totalidad del subtotal del comprobante como Deducible
-										subtotNoDed = 0; //No hay monto No Deducible en este caso
-										ivaAcred = iva; //Todo el IVA del Comprobante es Acreditable
-										ivaNoAcred = 0; //No hay monto de IVA No Acreditable
-									}
-									
-								}
-								if(pol_unidadFis=='%') //Evalua si la unidad de control del Tope Fiscal es en porcentaje
-								{
-									subtotDed = subtot * pol_TopeFiscNac; //Multiplica el subtotal del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como deducible
-									subtotNoDed = subtot - subtotDed; //Resta el subtotal del Comprobante menos la parte deducible, para determinar la parte no deducible
-									ivaAcred = iva * pol_TopeFiscNac; //Multiplica el IVA del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como IVA Acreditable
-									ivaNoAcred = iva - ivaAcred; //Resta el IVA del comprobante menos el IVA Acreditable para obtener el IVA no Acreditable
-								}
-							}
-							else //En caso de no existir Tope Fiscal ni Nacional ni Extranjero para el tipo de gasto
+							else //En caso que el subtotal del comprobante no sea mayor al Tope Fiscal
 							{
 								subtotDed = subtot; //Se establece la totalidad del subtotal del comprobante como Deducible
 								subtotNoDed = 0; //No hay monto No Deducible en este caso
@@ -2286,83 +2314,56 @@ function sumaMontos(tipoGasto)
 								ivaNoAcred = 0; //No hay monto de IVA No Acreditable
 							}
 						}
-						else //En caso que el monto total del comprobante ses mayor al Tope Fiscal de pago en Efectivo
+						if(pol_unidadFis=='%') //Evalua si la unidad de control del Tope Fiscal es en porcentaje
 						{
-							subtotDed = 0;
-							subtotNoDed = subtot; //El Subtotal del COmprobante se determina como No Deducible
-							ivaAcred = 0;
-							ivaNoAcred = iva; //Todo el IVA se determina como No Acreditable
+							subtotDed = subtot * pol_TopeFiscExt; //Multiplica el subtotal del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como deducible
+							subtotNoDed = subtot - subtotDed; //Resta el subtotal del Comprobante menos la parte deducible, para determinar la parte no deducible
+							ivaAcred = iva * pol_TopeFiscExt; //Multiplica el IVA del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como IVA Acreditable
+							ivaNoAcred = iva - ivaAcred; //Resta el IVA del comprobante menos el IVA Acreditable para obtener el IVA no Acreditable
 						}
 					}
-					else //En caso que el Tipo de pago principal (EL DE MAYOR MONTO INGRESADO POR EL USUARIO EN EL PORTAL) sea distinto a Efectivo
+					else if(pol_tFiscNac) //Evalua si para el tipo de gasto aplica validación de Tope Fiscal nacional
 					{
-						if(pol_tFiscExt) //Evalua si para el tipo de gasto aplica validación de Tope Fiscal Extranjero (solo cuando la comprobación sea extranjera)	
+						if(pol_unidadFis=='PESOS') //Evalua si la unidad de control del Tope Fiscal es en PESOS
+						{
+							if(subtot>pol_TopeFiscNac) //Evalua si el subtotal del comprobante es mayor al Tope Fiscal aplicable
 							{
-								if(pol_unidadFis=='PESOS') //Evalua si la unidad de control del Tope Fiscal es en PESOS
-								{
-									if(subtot>pol_TopeFiscExt) //Evalua si el subtotal del comprobante es mayor al Tope Fiscal aplicable
-									{
-										subtotDed = pol_TopeFiscExt; //Determina el monto del Tope Fiscal como cantidad deducible del gasto
-										subtotNoDed = subtot - pol_TopeFiscExt; //Resta el Tope Fiscal menos el subtotal del comprobante y eso se considera no deducible
-										ivaAcred = pol_TopeFiscExt * valorIva; //Multiplica el Tope Fiscal por la Tasa de IVA (Obtenida de AFKS - Campos diversos), eso se considera IVA Acreditable
-										ivaNoAcred = iva - ivaAcred; //Resta el IVA del COmprobante menos el IVA determinado como acreditable para definir la cantidad de IVA no Acreditable
-									}
-									else //En caso que el subtotal del comprobante no sea mayor al Tope Fiscal
-									{
-										subtotDed = subtot; //Se establece la totalidad del subtotal del comprobante como Deducible
-										subtotNoDed = 0; //No hay monto No Deducible en este caso
-										ivaAcred = iva; //Todo el IVA del Comprobante es Acreditable
-										ivaNoAcred = 0; //No hay monto de IVA No Acreditable
-									}
-								}
-								if(pol_unidadFis=='%') //Evalua si la unidad de control del Tope Fiscal es en porcentaje
-								{
-									subtotDed = subtot * pol_TopeFiscExt; //Multiplica el subtotal del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como deducible
-									subtotNoDed = subtot - subtotDed; //Resta el subtotal del Comprobante menos la parte deducible, para determinar la parte no deducible
-									ivaAcred = iva * pol_TopeFiscExt; //Multiplica el IVA del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como IVA Acreditable
-									ivaNoAcred = iva - ivaAcred; //Resta el IVA del comprobante menos el IVA Acreditable para obtener el IVA no Acreditable
-								}
+								subtotDed = pol_TopeFiscNac; //Determina el monto del Tope Fiscal como cantidad deducible del gasto
+								subtotNoDed = subtot - pol_TopeFiscNac; //Resta el Tope Fiscal menos el subtotal del comprobante y eso se considera no deducible
+								ivaAcred = pol_TopeFiscNac * valorIva; //Multiplica el Tope Fiscal por la Tasa de IVA (Obtenida de AFKS - Campos diversos), eso se considera IVA Acreditable
+								ivaNoAcred = iva - ivaAcred; //Resta el IVA del COmprobante menos el IVA determinado como acreditable para definir la cantidad de IVA no Acreditable
 							}
-							else if(pol_tFiscNac) //Evalua si para el tipo de gasto aplica validación de Tope Fiscal nacional
-							{
-								if(pol_unidadFis=='PESOS') //Evalua si la unidad de control del Tope Fiscal es en PESOS
-								{
-									if(subtot>pol_TopeFiscNac) //Evalua si el subtotal del comprobante es mayor al Tope Fiscal aplicable
-									{
-										subtotDed = pol_TopeFiscNac; //Determina el monto del Tope Fiscal como cantidad deducible del gasto
-										subtotNoDed = subtot - pol_TopeFiscNac; //Resta el Tope Fiscal menos el subtotal del comprobante y eso se considera no deducible
-										ivaAcred = pol_TopeFiscNac * valorIva; //Multiplica el Tope Fiscal por la Tasa de IVA (Obtenida de AFKS - Campos diversos), eso se considera IVA Acreditable
-										ivaNoAcred = iva - ivaAcred; //Resta el IVA del COmprobante menos el IVA determinado como acreditable para definir la cantidad de IVA no Acreditable
-									}
-									else //En caso que el subtotal del comprobante no sea mayor al Tope Fiscal
-									{
-										subtotDed = subtot; //Se establece la totalidad del subtotal del comprobante como Deducible
-										subtotNoDed = 0; //No hay monto No Deducible en este caso
-										ivaAcred = iva; //Todo el IVA del Comprobante es Acreditable
-										ivaNoAcred = 0; //No hay monto de IVA No Acreditable
-									}
-									
-								}
-								if(pol_unidadFis=='%') //Evalua si la unidad de control del Tope Fiscal es en porcentaje
-								{
-									subtotDed = subtot * pol_TopeFiscNac; //Multiplica el subtotal del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como deducible
-									subtotNoDed = subtot - subtotDed; //Resta el subtotal del Comprobante menos la parte deducible, para determinar la parte no deducible
-									ivaAcred = iva * pol_TopeFiscNac; //Multiplica el IVA del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como IVA Acreditable
-									ivaNoAcred = iva - ivaAcred; //Resta el IVA del comprobante menos el IVA Acreditable para obtener el IVA no Acreditable
-								}
-							}
-							else //En caso de no existir Tope Fiscal ni Nacional ni Extranjero para el tipo de gasto
+							else //En caso que el subtotal del comprobante no sea mayor al Tope Fiscal
 							{
 								subtotDed = subtot; //Se establece la totalidad del subtotal del comprobante como Deducible
 								subtotNoDed = 0; //No hay monto No Deducible en este caso
 								ivaAcred = iva; //Todo el IVA del Comprobante es Acreditable
 								ivaNoAcred = 0; //No hay monto de IVA No Acreditable
 							}
+							
+						}
+						if(pol_unidadFis=='%') //Evalua si la unidad de control del Tope Fiscal es en porcentaje
+						{
+							subtotDed = subtot * pol_TopeFiscNac; //Multiplica el subtotal del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como deducible
+							subtotNoDed = subtot - subtotDed; //Resta el subtotal del Comprobante menos la parte deducible, para determinar la parte no deducible
+							ivaAcred = iva * pol_TopeFiscNac; //Multiplica el IVA del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como IVA Acreditable
+							ivaNoAcred = iva - ivaAcred; //Resta el IVA del comprobante menos el IVA Acreditable para obtener el IVA no Acreditable
+						}
 					}
-				}
-				
-				//alert('Rubro='+ tipoG +'\n pol_tFiscNac=' + pol_tFiscNac + '\n pol_tFiscExt=' + pol_tFiscExt + '\n pol_unidadFis=' + pol_unidadFis + '\n valorIva=' + valorIva + '\n subtot=' + subtot + '\n iva=' + iva  + '\n pol_TopeFiscNac=' + pol_TopeFiscNac + '\n subtotDed=' + subtotDed + '\n subtotNoDed=' + subtotNoDed + '\n ivaAcred=' + ivaAcred + '\n ivaNoAcred=' + ivaNoAcred);
+					else //En caso de no existir Tope Fiscal ni Nacional ni Extranjero para el tipo de gasto
+					{
+						subtotDed = subtot; //Se establece la totalidad del subtotal del comprobante como Deducible
+						subtotNoDed = 0; //No hay monto No Deducible en este caso
+						ivaAcred = iva; //Todo el IVA del Comprobante es Acreditable
+						ivaNoAcred = 0; //No hay monto de IVA No Acreditable
+					}
+			}
+		}
 
+		switch(tipoG)
+		{
+			//Definición de campos especificos por tipo de gasto
+			case 1:
 				remamente = (totalFact - ((otro_subtot + otro_iva) + (subtot + iva))).toFixed(2); //Se determina si existe algun remanente de la suma de los IVAS y Subtotales contra el Total Neto del Comprobante
 				if(remamente<0) //Si el remanente es menor a cero se determina como no existente
 				{
@@ -2379,84 +2380,100 @@ function sumaMontos(tipoGasto)
 					actualizaKW('posicion', tipoGasto, handle, 'impLoc', dosDecim(remamente));
 					subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(remamente)).toFixed(2);
 				}
-				servicio = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_servicio').value);
-				if(servicio>0) //En caso de existir propina en el comprobante, esta se suma a la parte No Deducible del Comprobante
-				{
-					subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(servicio)).toFixed(2);
-				}
-				//Se actualizan los montos Deducible, No Deducible, IVA Acreditable e IVA No Acreditable en la parte Gráfica de los capos del comprobante en el Formulario y en las KW's correspondientes en el KWTG GV - Posiciones
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ded').value = dosDecim(subtotDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaAcre').value = dosDecim(ivaAcred);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_noded').value = dosDecim(subtotNoDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaNoAcre').value = dosDecim(ivaNoAcred);
-				actualizaKW('posicion', tipoGasto, handle, 'ded', dosDecim(subtotDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaAcre', dosDecim(ivaAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'noDed', dosDecim(subtotNoDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaNoAcre', dosDecim(ivaNoAcred));
-			}
-			//Al termino de recorrer todos los comproantes del tipo de gasto, se determinan las variables acumuladoras siguientes
-			var sumDed = 0.0;
-			var sumNoDed = 0.0;
-			var sumIVA = 0.0;
-			var sumNoIVA = 0.0;
-			var sumImpLoc = 0.0;
-			var sumServ = 0.0;
-			var sumNoches = 0;
-			var sumReman = 0;
-			for(var n = 1; n<= countFact; n++) //Volvemos a recorrer todos los comprobantes del Tipo de Gasto
-			{
-				var ded = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ded').value; //Obtiene la parte Deducible del Comprobante
-				if (ded=='') ded = 0; //Evalua si esta vacia la parte Deducible y en ese caso la establece en cero
-				sumDed = ((parseFloat(sumDed) + parseFloat(ded))).toFixed(2); //Suma en la variable acumuladora la parte Deducible
-				var NoDed = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_noded').value; //Obtiene la parte No Deducible del Comprobante
-				if (NoDed=='') NoDed = 0; //Evalua si esta vacia la parte No Deducible y en ese caso la establece en cero
-				sumNoDed = ((parseFloat(sumNoDed) + parseFloat(NoDed))).toFixed(2); //Suma en la variable acumuladora la parte No Deducible
-				var iva = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaAcre').value; //Obtiene la parte de IVA Acreditable del Comprobante
-				if (iva=='') iva = 0; //Evalua si esta vacia la parte de IVA Acreditable y en ese caso la establece en cero
-				sumIVA = ((parseFloat(sumIVA) + parseFloat(iva))).toFixed(2); //Suma en la variable acumuladora la parte de IVA Acreditable
-				var noIVA = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaNoAcre').value; //Obtiene la parte de IVA No Acreditable del Comprobante
-				if (noIVA=='') noIVA = 0; //Evalua si esta vacia la parte de IVA No Acreditable y en ese caso la establece en cero
-				sumNoIVA = ((parseFloat(sumNoIVA) + parseFloat(noIVA))).toFixed(2); //Suma en la variable acumuladora la parte de IVA No Acreditable
-				var ImpLoc = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ish').value; //Obtiene la parte de Impuesto Local (ISH) del Comprobante
-				if (ImpLoc=='') ImpLoc = 0; //Evalua si esta vacia la parte de Impuesto Local (ISH) y en ese caso la establece en cero
-				sumImpLoc = ((parseFloat(sumImpLoc) + parseFloat(ImpLoc))).toFixed(2); //Suma en la variable acumuladora la parte de Impuesto Local (ISH)
-				var serv = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_servicio').value; //Obtiene la parte de Propina del Comprobante
-				if (serv=='') serv = 0; //Evalua si esta vacia la parte de Propina y en ese caso la establece en cero
-				sumServ = ((parseFloat(sumServ) + parseFloat(serv))).toFixed(2); //Suma en la variable acumuladora la parte de Propina
-				var noches = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_noches').value; //Obtiene la parte de Cantidad de noches de Hospedaje del Comprobante
-				if (noches=='') noches = 0; //Evalua si esta vacia la parte de Cant Noches y en ese caso la establece en cero
-				sumNoches = ((parseFloat(sumNoches) + parseFloat(noches))).toFixed(2); //Suma en la variable acumuladora la parte de Cant Noches
-				var remamente = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_remamente').value; //Obtiene la parte de Remanente del Comprobante
-				if (remamente=='') remamente = 0; //Evalua si esta vacia la parte de Remanente y en ese caso la establece en cero
-				sumReman = ((parseFloat(sumReman) + parseFloat(remamente))).toFixed(2); //Suma en la variable acumuladora la parte de Remanente
-				//alert('xFact n='+n+' sumDed='+ sumDed +' sumNoDed='+sumNoDed);
-			}
+				break;
+		}
 
-			//Se actualizan los montos Deducible, No Deducible, IVA Acreditable e IVA No Acreditable en la parte Grafica de los capos del comprobante en el Formulario y en las KW's correspondientes en el KWTG GV - Sumas
-			document.getElementById('sum_tipo'+tipoGasto+'_serv').value = dosDecim(sumServ);
-			document.getElementById('sum_tipo'+tipoGasto+'_noches').value = dosDecim(sumNoches);
-			document.getElementById('sum_tipo'+tipoGasto+'_ish').value = dosDecim(sumImpLoc);
-			
-			document.getElementById('mto_tipo'+tipoGasto+'_ded').innerHTML = dosDecim(sumDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_noded').innerHTML = dosDecim(sumNoDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_iva').innerHTML = dosDecim(sumIVA);
-			document.getElementById('mto_tipo'+tipoGasto+'_noiva').innerHTML = dosDecim(sumNoIVA);
+		servicio = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_servicio').value);
+		if(servicio>0) //En caso de existir propina en el comprobante, esta se suma a la parte No Deducible del Comprobante
+		{
+			subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(servicio)).toFixed(2);
+		}
 
-			actualizaKW('sumas', tipoGasto, '', 'ded', dosDecim(sumDed));
-			actualizaKW('sumas', tipoGasto, '', 'noDed', dosDecim(sumNoDed));
-			actualizaKW('sumas', tipoGasto, '', 'ivaAcre', dosDecim(sumIVA));
-			actualizaKW('sumas', tipoGasto, '', 'ivaNoAcre', dosDecim(sumNoIVA));
-			actualizaKW('sumas', tipoGasto, '', 'serv', dosDecim(sumServ));
-			actualizaKW('sumas', tipoGasto, '', 'impLoc', dosDecim(sumImpLoc));
-			actualizaKW('sumas', tipoGasto, '', 'detGast', dosDecim(sumNoches));
+		//alert('Rubro='+ tipoG +'\n pol_tFiscNac=' + pol_tFiscNac + '\n pol_tFiscExt=' + pol_tFiscExt + '\n pol_unidadFis=' + pol_unidadFis + '\n valorIva=' + valorIva + '\n subtot=' + subtot + '\n iva=' + iva  + '\n pol_TopeFiscNac=' + pol_TopeFiscNac + '\n subtotDed=' + subtotDed + '\n subtotNoDed=' + subtotNoDed + '\n ivaAcred=' + ivaAcred + '\n ivaNoAcred=' + ivaNoAcred);
 
-			//Suma al Total Neto de la comprobación los montos obtenidos
-			sumTotDed = (parseFloat(sumTotDed) + parseFloat(sumDed)).toFixed(2);
-			sumTotNoDed = (parseFloat(sumTotNoDed) + parseFloat(sumNoDed)).toFixed(2);
-			sumTotIVAAcre = (parseFloat(sumTotIVAAcre) + parseFloat(sumIVA)).toFixed(2);
-			sumTotIVAnoAcre = (parseFloat(sumTotIVAnoAcre) + parseFloat(sumNoIVA)).toFixed(2);
-			sumTotComp = (parseFloat(sumTotComp) + parseFloat(sumDed) + parseFloat(sumNoDed) + parseFloat(sumIVA) + parseFloat(sumNoIVA)).toFixed(2);
+		//Se actualizan los montos Deducible, No Deducible, IVA Acreditable e IVA No Acreditable en la parte Gráfica de los capos del comprobante en el Formulario y en las KW's correspondientes en el KWTG GV - Posiciones
+		document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ded').value = dosDecim(subtotDed);
+		document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaAcre').value = dosDecim(ivaAcred);
+		document.getElementById('tipo'+tipoGasto+'_fact'+i+'_noded').value = dosDecim(subtotNoDed);
+		document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaNoAcre').value = dosDecim(ivaNoAcred);
+		actualizaKW('posicion', tipoGasto, handle, 'ded', dosDecim(subtotDed));
+		actualizaKW('posicion', tipoGasto, handle, 'ivaAcre', dosDecim(ivaAcred));
+		actualizaKW('posicion', tipoGasto, handle, 'noDed', dosDecim(subtotNoDed));
+		actualizaKW('posicion', tipoGasto, handle, 'ivaNoAcre', dosDecim(ivaNoAcred));
 
+	}
+
+	//Al termino de recorrer todos los comproantes del tipo de gasto, se determinan las variables acumuladoras siguientes
+	var sumDed = 0.0;
+	var sumNoDed = 0.0;
+	var sumIVA = 0.0;
+	var sumNoIVA = 0.0;
+	var sumImpLoc = 0.0;
+	var sumServ = 0.0;
+	var sumNoches = 0;
+	var sumReman = 0;
+	for(var n = 1; n<= countFact; n++) //Volvemos a recorrer todos los comprobantes del Tipo de Gasto
+	{
+		var ded = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ded').value; //Obtiene la parte Deducible del Comprobante
+		if (ded=='') ded = 0; //Evalua si esta vacia la parte Deducible y en ese caso la establece en cero
+		sumDed = ((parseFloat(sumDed) + parseFloat(ded))).toFixed(2); //Suma en la variable acumuladora la parte Deducible
+		var NoDed = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_noded').value; //Obtiene la parte No Deducible del Comprobante
+		if (NoDed=='') NoDed = 0; //Evalua si esta vacia la parte No Deducible y en ese caso la establece en cero
+		sumNoDed = ((parseFloat(sumNoDed) + parseFloat(NoDed))).toFixed(2); //Suma en la variable acumuladora la parte No Deducible
+		var iva = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaAcre').value; //Obtiene la parte de IVA Acreditable del Comprobante
+		if (iva=='') iva = 0; //Evalua si esta vacia la parte de IVA Acreditable y en ese caso la establece en cero
+		sumIVA = ((parseFloat(sumIVA) + parseFloat(iva))).toFixed(2); //Suma en la variable acumuladora la parte de IVA Acreditable
+		var noIVA = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaNoAcre').value; //Obtiene la parte de IVA No Acreditable del Comprobante
+		if (noIVA=='') noIVA = 0; //Evalua si esta vacia la parte de IVA No Acreditable y en ese caso la establece en cero
+		sumNoIVA = ((parseFloat(sumNoIVA) + parseFloat(noIVA))).toFixed(2); //Suma en la variable acumuladora la parte de IVA No Acreditable
+		var ImpLoc = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ish').value; //Obtiene la parte de Impuesto Local (ISH) del Comprobante
+		if (ImpLoc=='') ImpLoc = 0; //Evalua si esta vacia la parte de Impuesto Local (ISH) y en ese caso la establece en cero
+		sumImpLoc = ((parseFloat(sumImpLoc) + parseFloat(ImpLoc))).toFixed(2); //Suma en la variable acumuladora la parte de Impuesto Local (ISH)
+		var serv = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_servicio').value; //Obtiene la parte de Propina del Comprobante
+		if (serv=='') serv = 0; //Evalua si esta vacia la parte de Propina y en ese caso la establece en cero
+		sumServ = ((parseFloat(sumServ) + parseFloat(serv))).toFixed(2); //Suma en la variable acumuladora la parte de Propina
+		var noches = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_noches').value; //Obtiene la parte de Cantidad de noches de Hospedaje del Comprobante
+		if (noches=='') noches = 0; //Evalua si esta vacia la parte de Cant Noches y en ese caso la establece en cero
+		sumNoches = ((parseFloat(sumNoches) + parseFloat(noches))).toFixed(2); //Suma en la variable acumuladora la parte de Cant Noches
+		var remamente = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_remamente').value; //Obtiene la parte de Remanente del Comprobante
+		if (remamente=='') remamente = 0; //Evalua si esta vacia la parte de Remanente y en ese caso la establece en cero
+		sumReman = ((parseFloat(sumReman) + parseFloat(remamente))).toFixed(2); //Suma en la variable acumuladora la parte de Remanente
+		//alert('xFact n='+n+' sumDed='+ sumDed +' sumNoDed='+sumNoDed);
+	}
+
+	//Se actualizan los montos Deducible, No Deducible, IVA Acreditable e IVA No Acreditable en la parte Grafica de los capos del comprobante en el Formulario y en las KW's correspondientes en el KWTG GV - Sumas
+	document.getElementById('sum_tipo'+tipoGasto+'_serv').value = dosDecim(sumServ);
+	document.getElementById('sum_tipo'+tipoGasto+'_noches').value = dosDecim(sumNoches);
+	document.getElementById('sum_tipo'+tipoGasto+'_ish').value = dosDecim(sumImpLoc);
+	
+	document.getElementById('mto_tipo'+tipoGasto+'_ded').innerHTML = dosDecim(sumDed);
+	document.getElementById('mto_tipo'+tipoGasto+'_noded').innerHTML = dosDecim(sumNoDed);
+	document.getElementById('mto_tipo'+tipoGasto+'_iva').innerHTML = dosDecim(sumIVA);
+	document.getElementById('mto_tipo'+tipoGasto+'_noiva').innerHTML = dosDecim(sumNoIVA);
+
+	actualizaKW('sumas', tipoGasto, '', 'ded', dosDecim(sumDed));
+	actualizaKW('sumas', tipoGasto, '', 'noDed', dosDecim(sumNoDed));
+	actualizaKW('sumas', tipoGasto, '', 'ivaAcre', dosDecim(sumIVA));
+	actualizaKW('sumas', tipoGasto, '', 'ivaNoAcre', dosDecim(sumNoIVA));
+	actualizaKW('sumas', tipoGasto, '', 'serv', dosDecim(sumServ));
+	actualizaKW('sumas', tipoGasto, '', 'impLoc', dosDecim(sumImpLoc));
+	actualizaKW('sumas', tipoGasto, '', 'detGast', dosDecim(sumNoches));
+
+	//Suma al Total Neto de la comprobación los montos obtenidos
+	sumTotDed = (parseFloat(sumTotDed) + parseFloat(sumDed)).toFixed(2);
+	sumTotNoDed = (parseFloat(sumTotNoDed) + parseFloat(sumNoDed)).toFixed(2);
+	sumTotIVAAcre = (parseFloat(sumTotIVAAcre) + parseFloat(sumIVA)).toFixed(2);
+	sumTotIVAnoAcre = (parseFloat(sumTotIVAnoAcre) + parseFloat(sumNoIVA)).toFixed(2);
+	sumTotComp = (parseFloat(sumTotComp) + parseFloat(sumDed) + parseFloat(sumNoDed) + parseFloat(sumIVA) + parseFloat(sumNoIVA)).toFixed(2);
+
+	//La validación por cada Comprobante de cada tipo de gasto se realiza a continuación, se tiene en un Switch Case y con codigo repetido debido a que en el usuario dijo en todo momento que cada tipo de gasto tiene distintas validaciones y distintas reglas que determinarian que sea deducible o no, por lo que se determinó que cada tipo de gasto fuera un case distinto
+	//Sin embargo al termino del desarrollo de este formulario (Mayo-2018) todos los casos conllevan el mismo tratamiento, por lo que solo encontrará comentado el codigo del Tipo de gasto 1
+	
+	/*
+	switch(tipoG)
+	{
+		//Validaciones Fiscales y determinación de montos deducibles para Tipo Gasto 1 (Hospedaje)
+		case 1:
 		break;
 		case 2:
 			for(var i = 1; i<= countFact; i++)
@@ -6704,6 +6721,7 @@ function sumaMontos(tipoGasto)
 		break;
 
 	}
+	*/
 }
 /*=======================
 Funcion Envia el valor a modificar en un campo KW para OnBase
