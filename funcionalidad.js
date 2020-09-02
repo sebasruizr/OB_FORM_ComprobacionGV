@@ -58,7 +58,7 @@ Se muestran en la marca de agua al pie del Formulario
 10/05/2019 18:41 = Sebastian Ruiz - Ajuste JS para discriminar los impuestos trasladados de la factura siempre igual a 002 correspondiente a IVA y omitir otros impuestos como IEPS
 14/05/2019 16:08 = Sebastian Ruiz - Ajuste JS para controlar en Tipo Gastos 10 (Renta de Auto) si la factura tiene IVA en 0, no realice el calculo de IVA Acreditable por monto o porcentaje
 */
-var versionJS = '14/05/2019 16:40 '; //Ultima modificación de este archivo JS 
+var versionJS = '01/09/2020 18:11 '; //Ultima modificación de este archivo JS 
 var versionFormOB = 'V 1.0 09052018'; //Ultima versión del SYS HTML FORM asignado a DT en OnBase
 
 //Los siguientes arrays son cargados en memoria en cada carga del formulario para control de las funciones de mas adelante
@@ -614,20 +614,52 @@ function creaFactCFDI(tipoGasto, i, tipoFact, detalleGasto, SerieFolio, rfc, pro
 						</div> \
 						<div class="col-sm-4"> \
 							<div class="input-group input-group-sm"> \
-								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">Deducible</span> \
+								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">Deducible 16%</span> \
 								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_ded" class="form-control" readonly value="'+ded+'" /> \
 							</div> \
 							<div class="input-group input-group-sm"> \
-								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">No Deducible</span> \
+								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">No Deducible 16%</span> \
 								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_noded" class="form-control" readonly value="'+noDed+'" /> \
 							</div> \
 							<div class="input-group input-group-sm"> \
-								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">IVA Acreditable</span> \
+								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">IVA Acreditable 16%</span> \
 								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_ivaAcre" class="form-control" readonly value="'+iva+'" /> \
 							</div> \
 							<div class="input-group input-group-sm"> \
-								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">IVA No Acreditable</span> \
+								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">IVA No Acreditable 16%</span> \
 								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_ivaNoAcre" class="form-control" readonly value="'+noIva+'" /> \
+							</div> \
+							<div class="input-group input-group-sm"> \
+								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">Deducible 8%</span> \
+								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_ded8" class="form-control" readonly value="'+ded+'" /> \
+							</div> \
+							<div class="input-group input-group-sm"> \
+								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">No Deducible 8%</span> \
+								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_noded8" class="form-control" readonly value="'+noDed+'" /> \
+							</div> \
+							<div class="input-group input-group-sm"> \
+								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">IVA Acreditable 8%</span> \
+								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_ivaAcre8" class="form-control" readonly value="'+iva+'" /> \
+							</div> \
+							<div class="input-group input-group-sm"> \
+								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">IVA No Acreditable 8%</span> \
+								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_ivaNoAcre8" class="form-control" readonly value="'+noIva+'" /> \
+							</div> \
+							<div class="input-group input-group-sm"> \
+								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">Deducible 0%</span> \
+								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_ded0" class="form-control" readonly value="'+ded+'" /> \
+							</div> \
+							<div class="input-group input-group-sm"> \
+								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">No Deducible 0%</span> \
+								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_noded0" class="form-control" readonly value="'+noDed+'" /> \
+							</div> \
+							<div class="input-group input-group-sm"> \
+								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">IVA Acreditable 0%</span> \
+								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_ivaAcre0" class="form-control" readonly value="'+iva+'" /> \
+							</div> \
+							<div class="input-group input-group-sm"> \
+								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">IVA No Acreditable 0%</span> \
+								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_ivaNoAcre0" class="form-control" readonly value="'+noIva+'" /> \
 							</div> \
 						</div> ';
 		}
@@ -2096,7 +2128,70 @@ function sumaMontos(tipoGasto)
 				var subtotNoDed = 0;
 				var ivaAcred = 0;
 				var ivaNoAcred = 0;
+
+				var subtotDed8 = 0;
+				var subtotNoDed8 = 0;
+				var ivaAcred8 = 0;
+				var ivaNoAcred8 = 0;
+
+				var subtotDed0 = 0;
+				var subtotNoDed0 = 0;
+				var ivaAcred0 = 0;
+				var ivaNoAcred0 = 0;
+
 				var unidadPorcentaje = 0;
+
+
+				/*========================================
+				Inicia TEMP Divide IVAs
+				==========================================*/
+
+				var subTot16 = 0.0;
+				var subTot8 = 0.0;
+				var	subTot0 = 0.0;
+				var mtoIva16 = 0.0;
+				var mtoIva8 = 0.0;
+				var mtoIva0 = 0.0;
+
+				for(r=1;r<=250;r++) //Recorrera cada concepto del CFDI... En este caso particular si va directo a los inputs del HTML que corresponden a los valores de KW del KWTG FE - Conceptos
+				{
+					handleItem = document.getElementById('OBKey__572_'+r).value;
+					if(handleItem!='')//Asegura que el Handle del Registro del KWTG FE - Conceptos no este vacio
+					{
+						if(handleItem==handle) //Valida que el Handle del Concepto corresponda al mismo handle del Comprobante principal
+						{
+							var tasa = document.getElementById('OBKey__505_'+r).value;
+							var cImporte = parseFloat(document.getElementById('OBKey__105_'+r)).value;
+							var tImporte = parseFloat(document.getElementById('OBKey__504_'+r)).value;
+
+							switch (tasa)
+							{
+								case '0.16':
+									subTot16 += cImporte;
+									mtoIva16 += tImporte;
+								break;
+
+								case '0.08':
+									subTot8 += cImporte;
+									mtoIva8 += tImporte;
+								break;
+
+								case '0':
+									subTot0 += cImporte;
+									mtoIva0 += tImporte;
+								break;
+							}
+						}
+					}
+					else //Si el Handle esta vacio, deja de continuar recorriendo los Records del KWTG FE - Conceptos 
+					{
+						break;
+					}
+				}
+
+				/*========================================
+				Inicia TEMP Divide IVAs
+				==========================================*/
 
 				if((tipoFact == 'IMG') || (tipoFact == 'SCOMP')) //Si el tipo de COmprobante es igual a IMG o SCOMP automaticamente se determina todo el comprobante como no deducible e IVA no acreditable
 				{
@@ -2148,6 +2243,23 @@ function sumaMontos(tipoGasto)
 										subtotNoDed = subtot - pol_TopeFiscNac; //Resta el Tope Fiscal menos el subtotal del comprobante y eso se considera no deducible
 										ivaAcred = pol_TopeFiscNac * valorIva; //Multiplica el Tope Fiscal por la Tasa de IVA (Obtenida de AFKS - Campos diversos), eso se considera IVA Acreditable
 										ivaNoAcred = iva - ivaAcred; //Resta el IVA del COmprobante menos el IVA determinado como acreditable para definir la cantidad de IVA no Acreditable
+										
+										subtotDed8 = 0;
+										subtotNoDed8 = 0;
+										ivaAcred8 = 0;
+										ivaNoAcred8 = 0;
+
+										subtotDed0 = 0;
+										subtotNoDed0 = 0;
+										ivaAcred0 = 0;
+										ivaNoAcred0 = 0;
+
+										subTot16 = 0.0;
+										subTot8 = 0.0;
+										subTot0 = 0.0;
+										mtoIva16 = 0.0;
+										mtoIva8 = 0.0;
+										mtoIva0 = 0.0;
 									}
 									else //En caso que el subtotal del comprobante no sea mayor al Tope Fiscal
 									{
@@ -6771,5 +6883,51 @@ function validacionForm()
 		actualizaKW('sumas', '0', '', 'ivaNoAcre', dosDecim(sumTotIVAnoAcre));
 		document.getElementById('totalComprobacion').value = dosDecim(sumTotComp);
 		document.getElementById('mto_totNet').innerHTML = dosDecim(sumTotComp);
+	}
+}
+
+function separacionIvas(handle)
+{
+	var subTot16 = 0.0;
+	var subTot8 = 0.0;
+	var	subTot0 = 0.0;
+	var mtoIva16 = 0.0;
+	var mtoIva8 = 0.0;
+	var mtoIva0 = 0.0;
+
+	for(r=1;r<=250;r++) //Recorrera cada concepto del CFDI... En este caso particular si va directo a los inputs del HTML que corresponden a los valores de KW del KWTG FE - Conceptos
+	{
+		handleItem = document.getElementById('OBKey__572_'+r).value;
+		if(handleItem!='')//Asegura que el Handle del Registro del KWTG FE - Conceptos no este vacio
+		{
+			if(handleItem==handle) //Valida que el Handle del Concepto corresponda al mismo handle del Comprobante principal
+			{
+				var tasa = document.getElementById('OBKey__505_'+r).value;
+				var cImporte = parseFloat(document.getElementById('OBKey__105_'+r)).value;
+				var tImporte = parseFloat(document.getElementById('OBKey__504_'+r)).value;
+
+				switch (tasa)
+				{
+					case '0.16':
+						subTot16 += cImporte;
+						mtoIva16 += tImporte;
+					break;
+
+					case '0.08':
+						subTot8 += cImporte;
+						mtoIva8 += tImporte;
+					break;
+
+					case '0':
+						subTot0 += cImporte;
+						mtoIva0 += tImporte;
+					break;
+				}
+			}
+		}
+		else //Si el Handle esta vacio, deja de continuar recorriendo los Records del KWTG FE - Conceptos 
+		{
+			break;
+		}
 	}
 }
