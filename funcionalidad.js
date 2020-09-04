@@ -58,7 +58,7 @@ Se muestran en la marca de agua al pie del Formulario
 10/05/2019 18:41 = Sebastian Ruiz - Ajuste JS para discriminar los impuestos trasladados de la factura siempre igual a 002 correspondiente a IVA y omitir otros impuestos como IEPS
 14/05/2019 16:08 = Sebastian Ruiz - Ajuste JS para controlar en Tipo Gastos 10 (Renta de Auto) si la factura tiene IVA en 0, no realice el calculo de IVA Acreditable por monto o porcentaje
 */
-var versionJS = '02/09/2020 18:47 '; //Ultima modificación de este archivo JS 
+var versionJS = '04/09/2020 02:58 '; //Ultima modificación de este archivo JS 
 var versionFormOB = 'V 1.0 09052018'; //Ultima versión del SYS HTML FORM asignado a DT en OnBase
 
 //Los siguientes arrays son cargados en memoria en cada carga del formulario para control de las funciones de mas adelante
@@ -159,7 +159,7 @@ function cargaPagina()
 	//Muestra/Oculta secciones ocultas y de Pagina Gastos Viaje o Varios
 	if(admin > 1)
 	{
-		if(usrActual == 'MANAGER' || usrActual == 'ADMIN' || usrActual == 'ADMINISTRATOR')
+		if(usrActual == 'MANAGER' || usrActual == 'ADMIN' || usrActual == 'ADMINISTRATOR' || usrActual == 'ONBASE_LEGAL')
 		{
 			document.getElementById('ocultos').style.display = 'inline';
 		}
@@ -401,12 +401,13 @@ function recorrerKWFact()
 							var importe = dosDecim(document.getElementById('OBKey__195_'+r).value);
 							var impuesto = dosDecim(document.getElementById('OBKey__504_'+r).value);
 							var tipoGastoConc = document.getElementById('OBKey__620_'+r).value;
+							var tasaConc = document.getElementById('OBKey__505_'+r).value;
 
 							//Se determina el ID para la tabla HTML que será creada dentro de cada factura, la cual se compone de tipo de gasto y el iterador de factura que se encuentr en curso
 							var idtable = tipoGasto+'tabFact'+countFact;
 							//console.log('idtable: ' + idtable);
 							//Se llama la función creaRowFact() por cada Record de concepto encontrado, para que se cree el row correspondiente dentro de cada registro de factura creado previamente con la función creaFactCFDI(), el valor de idtable es el que determina que tabla HTML debera afectar. Y se envian los demas datos del KWTG FE - Concepto necesarios para crear el registro
-							creaRowFact(idtable, r, cant, descrip, pu, importe, impuesto, tipoGasto, tipoGastoConc);
+							creaRowFact(idtable, r, cant, descrip, pu, importe, impuesto, tipoGasto, tipoGastoConc, tasaConc);
 							//Se incrementa la cantidad de conceptos encontrados del comprobante factura CFDI en curso.
 							cantItems ++;
 						}
@@ -528,7 +529,8 @@ function creaFactCFDI(tipoGasto, i, tipoFact, detalleGasto, SerieFolio, rfc, pro
 					        <th class="col-md-4">Concepto</th> \
 					        <th class="col-md-2">TipoGasto</th>\
 					        <th class="col-md-1 aligRight">PU</th> \
-					        <th class="col-md-1 aligRight">IVA</th> \
+							<th class="col-md-1 aligRight">IVA</th> \
+							<th class="col-md-1 aligRight">Tasa</th> \
 					        <th class="col-md-1 aligRight">Total</th> \
 					      </tr> \
 					    </thead> \
@@ -540,6 +542,8 @@ function creaFactCFDI(tipoGasto, i, tipoFact, detalleGasto, SerieFolio, rfc, pro
 					        <td> \
 					        </td> \
 					        <td> \
+							</td> \
+							<td> \
 				        	</td> \
 					        <td colspan="2" class="tdLabel aligRight"> \
 					        	Subtotal CFDI \
@@ -556,6 +560,8 @@ function creaFactCFDI(tipoGasto, i, tipoFact, detalleGasto, SerieFolio, rfc, pro
 					        <td> \
 					        </td> \
 					        <td> \
+							</td> \
+							<td> \
 				        	</td> \
 					        <td colspan="2" class="tdLabel aligRight"> \
 					        	IVA CFDI \
@@ -572,6 +578,8 @@ function creaFactCFDI(tipoGasto, i, tipoFact, detalleGasto, SerieFolio, rfc, pro
 					        <td> \
 					        </td> \
 					        <td> \
+							</td> \
+							<td> \
 				        	</td> \
 					        <td colspan="2" class="tdLabel aligRight"> \
 					        	Total CFDI \
@@ -696,7 +704,7 @@ Crea graficamente un Row en la tabla de conceptos de cada factura CFDI
 =======================
 Función que se manda a llamar desde la función recorrerKWFact() por cada Concepto del CFDI encontrado en el KWTG FE - Conceptos
  */
-function creaRowFact(tabFact, r, cant, descrip, pu, importe, impuesto, tipoGasto, tipoGastoConc) 
+function creaRowFact(tabFact, r, cant, descrip, pu, importe, impuesto, tipoGasto, tipoGastoConc, tasaConc) 
 {
 	//console.log('entro al row, r= '+r);
     var table = document.getElementById(tabFact); //Determina cual de todas las tablas ya construidas en el DOM se va a alterar. tabFact proviene del ID para el elementos definido en la función recorrerKWFact()
@@ -724,8 +732,9 @@ function creaRowFact(tabFact, r, cant, descrip, pu, importe, impuesto, tipoGasto
     var cell1 = row.insertCell(1);
     var cell2 = row.insertCell(2);
     var cell3 = row.insertCell(3);
-    var cell4 = row.insertCell(4);
-    var cell5 = row.insertCell(5);
+	var cell4 = row.insertCell(4);
+	var cell5 = row.insertCell(5);
+    var cell6 = row.insertCell(6);
 
     //alert('tipo'+tipoGasto+'_fact'+countFact+'_item'+r+'_tGasto');
 
@@ -743,8 +752,11 @@ function creaRowFact(tabFact, r, cant, descrip, pu, importe, impuesto, tipoGasto
 			        	</div>';
     cell4.innerHTML = '<div class="input-group input-group-sm"> \
 			        		<input class="form-control aligRight" type="text" readonly id="tipo'+tipoGasto+'_fact'+countFact+'_item'+r+'_iva" value="'+impuesto+'" /> \
-			        	</div>';
-    cell5.innerHTML = '<div class="input-group input-group-sm"> \
+						</div>';
+	cell5.innerHTML = '<div class="input-group input-group-sm"> \
+			        		<input class="form-control aligRight" type="text" readonly id="tipo'+tipoGasto+'_fact'+countFact+'_item'+r+'_tasa" value="'+(parseFloat(tasaConc)*100)+'" /> \
+						</div>';
+    cell6.innerHTML = '<div class="input-group input-group-sm"> \
 			        		<input class="form-control aligRight" type="text" readonly id="tipo'+tipoGasto+'_fact'+countFact+'_item'+r+'_tot" value="'+importe+'" /> \
 			        	</div>';
 	//E campo de tipo  catalogo selectTpago para este punto fue declarado en el DOM, a continuación se determina su valor con base en lo proveniente de la KW
@@ -2071,11 +2083,34 @@ function sumaMontos(tipoGasto)
 		tipoPago = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tPago').value;
 		cantItems = parseInt(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_cantItems').value, 10);
 		desgloce = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_desgloce').value;
+		var desgloces = desgloce.split('-');
 		//Obtiene datos particulaes del comprobante con respecto al Tipo de Gasto a partir de los campos creados en el cuerpo del fomulario. No de KW: Cant Noches
-		noches = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_noches').value);
+		switch(tipoG)
+		{
+			//Definición de campos especificos por tipo de gasto
+			case 1:
+				noches = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_noches').value);
+				break;
+			case 8:
+				var litros = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_litros').value);
+				var kms = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_kms').value);
+				break;
+			case 17:
+				dedudici = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_deduci').value;
+				porcentajeusuario = parseFloat(dedudici) / 100;
+				//pol_TopeFiscExt = porcentaje;
+				//pol_TopeFiscNac = porcentaje;
+				break;
+		}
 
-		var otro_subtot = 0;
-		var otro_iva = 0;
+		/*
+		
+		
+		ELIMINAR TODO EL SIGUIENTE  IF
+		
+		
+		
+		*/
 		if(desgloce!='') //Evalua si existe separación de conceptos del CFDI
 		{
 			subtot = 0;
@@ -2117,26 +2152,29 @@ function sumaMontos(tipoGasto)
 			}
 		}
 
-		var subtotDed = 0;
-		var subtotNoDed = 0;
-		var ivaAcred = 0;
-		var ivaNoAcred = 0;
+		var subtotDed = 0.0;
+		var subtotNoDed = 0.0;
+		var ivaAcred = 0.0;
+		var ivaNoAcred = 0.0;
 
-		var subtotDed8 = 0;
-		var subtotNoDed8 = 0;
-		var ivaAcred8 = 0;
-		var ivaNoAcred8 = 0;
+		var subtotDed16 = 0.0;
+		var subtotNoDed16 = 0.0;
+		var ivaAcred16 = 0.0;
+		var ivaNoAcred16 = 0.0;
 
-		var subtotDed0 = 0;
-		var subtotNoDed0 = 0;
-		var ivaAcred0 = 0;
-		var ivaNoAcred0 = 0;
+		var subtotDed8 = 0.0;
+		var subtotNoDed8 = 0.0;
+		var ivaAcred8 = 0.0;
+		var ivaNoAcred8 = 0.0;
+
+		var subtotDed0 = 0.0;
+		var subtotNoDed0 = 0.0;
+		var ivaAcred0 = 0.0;
+		var ivaNoAcred0 = 0.0;
 
 		var unidadPorcentaje = 0;
-
-		/*========================================
-		Inicia TEMP Divide IVAs
-		==========================================*/
+		var otro_subtot = 0;
+		var otro_iva = 0;
 
 		var subTot16 = 0.0;
 		var subTot8 = 0.0;
@@ -2145,250 +2183,315 @@ function sumaMontos(tipoGasto)
 		var mtoIva8 = 0.0;
 		var mtoIva0 = 0.0;
 
-		for(r=1;r<=250;r++) //Recorrera cada concepto del CFDI... En este caso particular si va directo a los inputs del HTML que corresponden a los valores de KW del KWTG FE - Conceptos
-		{
-			handleItem = document.getElementById('OBKey__572_'+r).value;
-			if(handleItem!='')//Asegura que el Handle del Registro del KWTG FE - Conceptos no este vacio
-			{
-				if(handleItem==handle) //Valida que el Handle del Concepto corresponda al mismo handle del Comprobante principal
-				{
-					var tasa = document.getElementById('OBKey__505_'+r).value;
-					var cImporte = parseFloat(document.getElementById('OBKey__105_'+r)).value;
-					var tImporte = parseFloat(document.getElementById('OBKey__504_'+r)).value;
+		var tope;
 
-					switch (tasa)
-					{
-						case '0.16':
-							subTot16 += cImporte;
-							mtoIva16 += tImporte;
-						break;
-
-						case '0.08':
-							subTot8 += cImporte;
-							mtoIva8 += tImporte;
-						break;
-
-						case '0':
-							subTot0 += cImporte;
-							mtoIva0 += tImporte;
-						break;
-					}
-				}
-			}
-			else //Si el Handle esta vacio, deja de continuar recorriendo los Records del KWTG FE - Conceptos 
-			{
-				break;
-			}
-		}
-
-		console.log('subTot16 ' + subTot16);
-		console.log('subTot8 ' + subTot8);
-		console.log('subTot0 ' + subTot0);
-		console.log('mtoIva16 ' + mtoIva16);
-		console.log('mtoIva8 ' + mtoIva8);
-		console.log('mtoIva0 ' + mtoIva0);
-
-		/*========================================
-		Inicia TEMP Divide IVAs
-		==========================================*/
-
+		
 		if((tipoFact == 'IMG') || (tipoFact == 'SCOMP')) //Si el tipo de COmprobante es igual a IMG o SCOMP automaticamente se determina todo el comprobante como no deducible e IVA no acreditable
 		{
 			subtotDed = 0;
 			subtotNoDed = subtot; //El Subtotal del COmprobante se determina como No Deducible
+			subtotNoDed16 = subtot;
 			ivaAcred = 0;
 			ivaNoAcred = iva; //En caso de existir IVA, se determina como no Acreditable
+			ivaNoAcred16 = iva;
 		}
 		else //Caso contrario se considera como CFDI o un Concepto de CFDI (CCFDI)
 		{
-			if(tipoPago=='1') //Si el tipo de pago principal (EL DE MAYOR MONTO INGRESADO POR EL USUARIO EN EL PORTAL) es igual a 1 (Efectivo)
+			for(r=1;r<=250;r++) //Recorrera cada concepto del CFDI... En este caso particular si va directo a los inputs del HTML que corresponden a los valores de KW del KWTG FE - Conceptos
 			{
-				if(totalFact<=topeFisEfectivo) //Valida si el monto total del comprobante es menor al tipeFiscal obtenido del AFKS Pol - Campos diversos
+				handleItem = document.getElementById('OBKey__572_'+r).value;
+				if(handleItem!='')//Asegura que el Handle del Registro del KWTG FE - Conceptos no este vacio
+				{
+					if(handleItem==handle) //Valida que el Handle del Concepto corresponda al mismo handle del Comprobante principal
+					{
+						var tGastoItem = document.getElementById('OBKey__620_'+r).value;
+						var tasa = document.getElementById('OBKey__505_'+r).value;
+						var impConcepto = parseFloat(document.getElementById('OBKey__105_'+r)).value;
+						var impIva = parseFloat(document.getElementById('OBKey__504_'+r)).value;
+
+						if(tipoGasto==tGastoItem) //Valida si el Tipo de Gasto del Concepto encontrado con el mismo Handle es igual al Tipo de Gasto del CFDI principal
+						{
+							/*
+							subtot = subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
+							tmp_iva = document.getElementById('OBKey__504_'+r).value;
+							if(tmp_iva!='') //Valida que el concepto encontrado contenga IVA
+							{
+								iva = iva + parseFloat(tmp_iva); //Suma el monto del IVA en Acumulador principal de IVA
+							}
+							*/
+							switch (tasa)
+							{
+								case '0.16':
+									subTot16 += impConcepto;
+									mtoIva16 += impIva;
+								break;
+
+								case '0.08':
+									subTot8 += impConcepto;
+									mtoIva8 += impIva;
+								break;
+
+								case '0':
+									subTot0 += impConcepto;
+									mtoIva0 += impIva;
+								break;
+							}
+						}
+						else //Caso contrario en que el Concepto no corresponda al mismo Tipo de Gasto que el CFDI
+						{
+							otro_subtot = otro_subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
+							otrotmp_iva = document.getElementById('OBKey__504_'+r).value;
+							if(otrotmp_iva!='') //Valida que el concepto encontrado contenga IVA
+							{
+								otro_iva = otro_iva + parseFloat(otrotmp_iva); //Suma el monto del IVA en Acumulador alterno de IVA
+							}
+						}
+					}
+				}
+				else //Si el Handle esta vacio, deja de continuar recorriendo los Records del KWTG FE - Conceptos 
+				{
+					break;
+				}
+			}
+
+			console.log('handle ' + handle + ' tipoG ' + tipoG + ' subTot16 ' + subTot16);
+			console.log('handle ' + handle + ' tipoG ' + tipoG + ' subTot8 ' + subTot8);
+			console.log('handle ' + handle + ' tipoG ' + tipoG + ' subTot0 ' + subTot0);
+			console.log('handle ' + handle + ' tipoG ' + tipoG + ' mtoIva16 ' + mtoIva16);
+			console.log('handle ' + handle + ' tipoG ' + tipoG + ' mtoIva8 ' + mtoIva8);
+			console.log('handle ' + handle + ' tipoG ' + tipoG + ' mtoIva0 ' + mtoIva0);
+
+			if(tipoG==8)
+			{
+				if(tipoPago=='1')
+				{
+					subtotDed = 0;
+					subtotNoDed = subtot;
+					subtotNoDed16 = subtot;
+					ivaAcred = 0;
+					ivaNoAcred = iva;
+					ivaNoAcred16 = iva;
+				}
+				else
+				{
+					tope = kms * pol_TopeFiscNac;
+				}
+			}
+			else if(tipoG==17)
+			{
+				tope = porcentajeusuario;
+			}
+			else
+			{
+				if(tipoPago=='1') //Si el tipo de pago principal (EL DE MAYOR MONTO INGRESADO POR EL USUARIO EN EL PORTAL) es igual a 1 (Efectivo)
+				{
+					if(totalFact<=topeFisEfectivo) //Valida si el monto total del comprobante es menor al tipeFiscal obtenido del AFKS Pol - Campos diversos
+					{
+						if(pol_tFiscExt) //Evalua si para el tipo de gasto aplica validación de Tope Fiscal Extranjero (solo cuando la comprobación sea extranjera)	
+						{
+							if(pol_unidadFis=='PESOS') //Evalua si la unidad de control del Tope Fiscal es en PESOS
+							{
+								tope = pol_TopeFiscExt; //Determina el monto del Tope Fiscal como cantidad deducible del gasto
+							}
+							if(pol_unidadFis=='%') //Evalua si la unidad de control del Tope Fiscal es en porcentaje
+							{
+								tope = subtot * pol_TopeFiscExt; //Multiplica el subtotal del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como deducible
+							}
+						}
+						else if(pol_tFiscNac) //Evalua si para el tipo de gasto aplica validación de Tope Fiscal nacional
+						{
+							if(pol_unidadFis=='PESOS') //Evalua si la unidad de control del Tope Fiscal es en PESOS
+							{
+								tope = pol_TopeFiscNac; //Determina el monto del Tope Fiscal como cantidad deducible del gasto
+							}
+							if(pol_unidadFis=='%') //Evalua si la unidad de control del Tope Fiscal es en porcentaje
+							{
+								tope = subtot * pol_TopeFiscNac; //Multiplica el subtotal del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como deducible
+							}
+						}
+						else //En caso de no existir Tope Fiscal ni Nacional ni Extranjero para el tipo de gasto
+						{
+							tope = subtot;
+						}
+					}
+					else //En caso que el monto total del comprobante ses mayor al Tope Fiscal de pago en Efectivo
+					{
+						subtotDed = 0;
+						subtotNoDed = subtot;
+						subtotNoDed16 = subtot;
+						ivaAcred = 0;
+						ivaNoAcred = iva;
+						ivaNoAcred16 = iva;
+					}
+				}
+				else //En caso que el Tipo de pago principal (EL DE MAYOR MONTO INGRESADO POR EL USUARIO EN EL PORTAL) sea distinto a Efectivo
 				{
 					if(pol_tFiscExt) //Evalua si para el tipo de gasto aplica validación de Tope Fiscal Extranjero (solo cuando la comprobación sea extranjera)	
 					{
 						if(pol_unidadFis=='PESOS') //Evalua si la unidad de control del Tope Fiscal es en PESOS
 						{
-							if(subtot>pol_TopeFiscExt) //Evalua si el subtotal del comprobante es mayor al Tope Fiscal aplicable
-							{
-								subtotDed = pol_TopeFiscExt; //Determina el monto del Tope Fiscal como cantidad deducible del gasto
-								subtotNoDed = subtot - pol_TopeFiscExt; //Resta el Tope Fiscal menos el subtotal del comprobante y eso se considera no deducible
-								ivaAcred = pol_TopeFiscExt * valorIva; //Multiplica el Tope Fiscal por la Tasa de IVA (Obtenida de AFKS - Campos diversos), eso se considera IVA Acreditable
-								ivaNoAcred = iva - ivaAcred; //Resta el IVA del COmprobante menos el IVA determinado como acreditable para definir la cantidad de IVA no Acreditable
-							}
-							else //En caso que el subtotal del comprobante no sea mayor al Tope Fiscal
-							{
-								subtotDed = subtot; //Se establece la totalidad del subtotal del comprobante como Deducible
-								subtotNoDed = 0; //No hay monto No Deducible en este caso
-								ivaAcred = iva; //Todo el IVA del Comprobante es Acreditable
-								ivaNoAcred = 0; //No hay monto de IVA No Acreditable
-							}
+							tope = pol_TopeFiscExt; //Determina el monto del Tope Fiscal como cantidad deducible del gasto
 						}
 						if(pol_unidadFis=='%') //Evalua si la unidad de control del Tope Fiscal es en porcentaje
 						{
-							subtotDed = subtot * pol_TopeFiscExt; //Multiplica el subtotal del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como deducible
-							subtotNoDed = subtot - subtotDed; //Resta el subtotal del Comprobante menos la parte deducible, para determinar la parte no deducible
-							ivaAcred = iva * pol_TopeFiscExt; //Multiplica el IVA del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como IVA Acreditable
-							ivaNoAcred = iva - ivaAcred; //Resta el IVA del comprobante menos el IVA Acreditable para obtener el IVA no Acreditable
+							tope = subtot * pol_TopeFiscExt; //Multiplica el subtotal del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como deducible
 						}
 					}
 					else if(pol_tFiscNac) //Evalua si para el tipo de gasto aplica validación de Tope Fiscal nacional
 					{
 						if(pol_unidadFis=='PESOS') //Evalua si la unidad de control del Tope Fiscal es en PESOS
 						{
-							if(subtot>pol_TopeFiscNac) //Evalua si el subtotal del comprobante es mayor al Tope Fiscal aplicable
-							{
-								subtotDed = pol_TopeFiscNac; //Determina el monto del Tope Fiscal como cantidad deducible del gasto
-								subtotNoDed = subtot - pol_TopeFiscNac; //Resta el Tope Fiscal menos el subtotal del comprobante y eso se considera no deducible
-								ivaAcred = pol_TopeFiscNac * valorIva; //Multiplica el Tope Fiscal por la Tasa de IVA (Obtenida de AFKS - Campos diversos), eso se considera IVA Acreditable
-								ivaNoAcred = iva - ivaAcred; //Resta el IVA del COmprobante menos el IVA determinado como acreditable para definir la cantidad de IVA no Acreditable
-								
-								subtotDed8 = 0;
-								subtotNoDed8 = 0;
-								ivaAcred8 = 0;
-								ivaNoAcred8 = 0;
-
-								subtotDed0 = 0;
-								subtotNoDed0 = 0;
-								ivaAcred0 = 0;
-								ivaNoAcred0 = 0;
-
-								subTot16 = 0.0;
-								subTot8 = 0.0;
-								subTot0 = 0.0;
-								mtoIva16 = 0.0;
-								mtoIva8 = 0.0;
-								mtoIva0 = 0.0;
-							}
-							else //En caso que el subtotal del comprobante no sea mayor al Tope Fiscal
-							{
-								subtotDed = subtot; //Se establece la totalidad del subtotal del comprobante como Deducible
-								subtotNoDed = 0; //No hay monto No Deducible en este caso
-								ivaAcred = iva; //Todo el IVA del Comprobante es Acreditable
-								ivaNoAcred = 0; //No hay monto de IVA No Acreditable
-							}
-							
+							tope = pol_TopeFiscNac; //Determina el monto del Tope Fiscal como cantidad deducible del gasto
 						}
 						if(pol_unidadFis=='%') //Evalua si la unidad de control del Tope Fiscal es en porcentaje
 						{
-							subtotDed = subtot * pol_TopeFiscNac; //Multiplica el subtotal del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como deducible
-							subtotNoDed = subtot - subtotDed; //Resta el subtotal del Comprobante menos la parte deducible, para determinar la parte no deducible
-							ivaAcred = iva * pol_TopeFiscNac; //Multiplica el IVA del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como IVA Acreditable
-							ivaNoAcred = iva - ivaAcred; //Resta el IVA del comprobante menos el IVA Acreditable para obtener el IVA no Acreditable
+							tope = subtot * pol_TopeFiscNac; //Multiplica el subtotal del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como deducible
 						}
 					}
 					else //En caso de no existir Tope Fiscal ni Nacional ni Extranjero para el tipo de gasto
 					{
-						subtotDed = subtot; //Se establece la totalidad del subtotal del comprobante como Deducible
-						subtotNoDed = 0; //No hay monto No Deducible en este caso
-						ivaAcred = iva; //Todo el IVA del Comprobante es Acreditable
-						ivaNoAcred = 0; //No hay monto de IVA No Acreditable
+						tope = subtot; //Se establece la totalidad del subtotal del comprobante como Deducible
 					}
-				}
-				else //En caso que el monto total del comprobante ses mayor al Tope Fiscal de pago en Efectivo
-				{
-					subtotDed = 0;
-					subtotNoDed = subtot; //El Subtotal del COmprobante se determina como No Deducible
-					ivaAcred = 0;
-					ivaNoAcred = iva; //Todo el IVA se determina como No Acreditable
 				}
 			}
-			else //En caso que el Tipo de pago principal (EL DE MAYOR MONTO INGRESADO POR EL USUARIO EN EL PORTAL) sea distinto a Efectivo
+
+			var yadeducible = 0.0;
+
+			if(subTot16 == tope)
 			{
-				if(pol_tFiscExt) //Evalua si para el tipo de gasto aplica validación de Tope Fiscal Extranjero (solo cuando la comprobación sea extranjera)	
-					{
-						if(pol_unidadFis=='PESOS') //Evalua si la unidad de control del Tope Fiscal es en PESOS
-						{
-							if(subtot>pol_TopeFiscExt) //Evalua si el subtotal del comprobante es mayor al Tope Fiscal aplicable
-							{
-								subtotDed = pol_TopeFiscExt; //Determina el monto del Tope Fiscal como cantidad deducible del gasto
-								subtotNoDed = subtot - pol_TopeFiscExt; //Resta el Tope Fiscal menos el subtotal del comprobante y eso se considera no deducible
-								ivaAcred = pol_TopeFiscExt * valorIva; //Multiplica el Tope Fiscal por la Tasa de IVA (Obtenida de AFKS - Campos diversos), eso se considera IVA Acreditable
-								ivaNoAcred = iva - ivaAcred; //Resta el IVA del COmprobante menos el IVA determinado como acreditable para definir la cantidad de IVA no Acreditable
-							}
-							else //En caso que el subtotal del comprobante no sea mayor al Tope Fiscal
-							{
-								subtotDed = subtot; //Se establece la totalidad del subtotal del comprobante como Deducible
-								subtotNoDed = 0; //No hay monto No Deducible en este caso
-								ivaAcred = iva; //Todo el IVA del Comprobante es Acreditable
-								ivaNoAcred = 0; //No hay monto de IVA No Acreditable
-							}
-						}
-						if(pol_unidadFis=='%') //Evalua si la unidad de control del Tope Fiscal es en porcentaje
-						{
-							subtotDed = subtot * pol_TopeFiscExt; //Multiplica el subtotal del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como deducible
-							subtotNoDed = subtot - subtotDed; //Resta el subtotal del Comprobante menos la parte deducible, para determinar la parte no deducible
-							ivaAcred = iva * pol_TopeFiscExt; //Multiplica el IVA del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como IVA Acreditable
-							ivaNoAcred = iva - ivaAcred; //Resta el IVA del comprobante menos el IVA Acreditable para obtener el IVA no Acreditable
-						}
-					}
-					else if(pol_tFiscNac) //Evalua si para el tipo de gasto aplica validación de Tope Fiscal nacional
-					{
-						if(pol_unidadFis=='PESOS') //Evalua si la unidad de control del Tope Fiscal es en PESOS
-						{
-							if(subtot>pol_TopeFiscNac) //Evalua si el subtotal del comprobante es mayor al Tope Fiscal aplicable
-							{
-								subtotDed = pol_TopeFiscNac; //Determina el monto del Tope Fiscal como cantidad deducible del gasto
-								subtotNoDed = subtot - pol_TopeFiscNac; //Resta el Tope Fiscal menos el subtotal del comprobante y eso se considera no deducible
-								ivaAcred = pol_TopeFiscNac * valorIva; //Multiplica el Tope Fiscal por la Tasa de IVA (Obtenida de AFKS - Campos diversos), eso se considera IVA Acreditable
-								ivaNoAcred = iva - ivaAcred; //Resta el IVA del COmprobante menos el IVA determinado como acreditable para definir la cantidad de IVA no Acreditable
-							}
-							else //En caso que el subtotal del comprobante no sea mayor al Tope Fiscal
-							{
-								subtotDed = subtot; //Se establece la totalidad del subtotal del comprobante como Deducible
-								subtotNoDed = 0; //No hay monto No Deducible en este caso
-								ivaAcred = iva; //Todo el IVA del Comprobante es Acreditable
-								ivaNoAcred = 0; //No hay monto de IVA No Acreditable
-							}
-							
-						}
-						if(pol_unidadFis=='%') //Evalua si la unidad de control del Tope Fiscal es en porcentaje
-						{
-							subtotDed = subtot * pol_TopeFiscNac; //Multiplica el subtotal del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como deducible
-							subtotNoDed = subtot - subtotDed; //Resta el subtotal del Comprobante menos la parte deducible, para determinar la parte no deducible
-							ivaAcred = iva * pol_TopeFiscNac; //Multiplica el IVA del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como IVA Acreditable
-							ivaNoAcred = iva - ivaAcred; //Resta el IVA del comprobante menos el IVA Acreditable para obtener el IVA no Acreditable
-						}
-					}
-					else //En caso de no existir Tope Fiscal ni Nacional ni Extranjero para el tipo de gasto
-					{
-						subtotDed = subtot; //Se establece la totalidad del subtotal del comprobante como Deducible
-						subtotNoDed = 0; //No hay monto No Deducible en este caso
-						ivaAcred = iva; //Todo el IVA del Comprobante es Acreditable
-						ivaNoAcred = 0; //No hay monto de IVA No Acreditable
-					}
+				subtotDed16 = subTot16;
+				yadeducible = tope;
+				subtotNoDed16 = 0;
+			}
+			if(subTot16 < tope)
+			{
+				subtotDed16 = subTot16;
+				yadeducible = subtotDed16;
+				subtotNoDed16 = 0;
+			}
+			if(subTot16 > tope)
+			{
+				subtotDed16 = tope;
+				yadeducible = subtotDed16;
+				subtotNoDed16 = subTot16 - subtotDed16;
+			}
+
+			if((subTot8 + yadeducible) == tope)
+			{
+				subtotDed8 = subTot8;
+				yadeducible += subtotDed8;
+				subtotNoDed8 = 0;
+			}
+			if((subTot8 + yadeducible) < tope)
+			{
+				subtotDed8 = subTot8;
+				yadeducible += subtotDed8;
+				subtotNoDed8 = 0;
+			}
+			if((subTot8 + yadeducible) > tope)
+			{
+				subtotDed8 =  tope - yadeducible;
+				yadeducible = tope;
+				subtotNoDed8 = subTot8 - subtotDed8;
+			}
+
+			if((subTot0 + yadeducible) == tope)
+			{
+				subtotDed0 = subTot0;
+				yadeducible += subtotDed0;
+				subtotNoDed0 = 0;
+			}
+			if((subTot0 + yadeducible) < tope)
+			{
+				subtotDed0 = subTot0;
+				yadeducible += subtotDed0;
+				subtotNoDed0 = 0;
+			}
+			if((subTot0 + yadeducible) > tope)
+			{
+				subtotDed0 =  tope - yadeducible;
+				yadeducible = tope;
+				subtotNoDed0 = subTot0 - subtotDed0;
+			}
+
+			ivaAcred16 = subtotDed16 * 0.16;
+			ivaNoAcred16 = subtotNoDed16 * 0.16;
+			ivaAcred8 = subtotDed8 * 0.08;
+			ivaNoAcred8 = subtotNoDed8 * 0.08;
+			ivaAcred0 = subtotDed0 * 0.0;
+			ivaNoAcred0 = subtotNoDed0 * 0.0;
+
+			subtotDed = subtotDed16 + subtotDed8 + subtotDed0;
+			subtotNoDed = subtotNoDed16 + subtotNoDed8 + subtotNoDed0;
+			ivaAcred = ivaAcred16 + ivaAcred8 + ivaAcred0;
+			ivaNoAcred = ivaNoAcred16 + ivaNoAcred8 + ivaNoAcred0;
+
+			subtotGral = subtotDed + subtotNoDed;
+			ivaGral = ivaAcred + ivaNoAcred;
+			TotalGral = subtotGral + ivaGral;
+
+
+			console.log('subtotDed16 ' + subtotDed16);
+			console.log('subtotNoDed16 ' + subtotNoDed16);
+			console.log('subtotDed8 ' + subtotDed8);
+			console.log('subtotNoDed8 ' + subtotNoDed8);
+			console.log('subtotDed0 ' + subtotDed0);
+			console.log('subtotNoDed0 ' + subtotNoDed0);
+			console.log('ivaAcred16 ' + ivaAcred16);
+			console.log('ivaNoAcred16 ' + ivaNoAcred16);
+			console.log('ivaAcred8 ' + ivaAcred8);
+			console.log('ivaNoAcred8 ' + ivaNoAcred8);
+			console.log('ivaAcred0 ' + ivaAcred0);
+			console.log('ivaNoAcred0 ' + ivaNoAcred0);
+			console.log('========== ');
+			console.log('subtotDed ' + subtotDed);
+			console.log('subtotNoDed ' + subtotNoDed);
+			console.log('ivaAcred ' + ivaAcred);
+			console.log('ivaNoAcred ' + ivaNoAcred);
+			console.log('========== ');
+			console.log('subtotGral ' + subtotGral);
+			console.log('ivaGral ' + ivaGral);
+			console.log('TotalGral ' + TotalGral);
+
+		}
+
+		remamente = (totalFact - ((otro_subtot + otro_iva) + (subtot + iva))).toFixed(2); //Se determina si existe algun remanente de la suma de los IVAS y Subtotales contra el Total Neto del Comprobante
+		if(remamente<0) //Si el remanente es menor a cero se determina como no existente
+		{
+			document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = 0;
+			actualizaKW('posicion', tipoGasto, handle, 'remamente', 0);
+			switch(tipoG)
+			{
+				case 1:
+					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ish').value = 0;
+					actualizaKW('posicion', tipoGasto, handle, 'impLoc', 0);
+					break;
+			}
+		}
+		else //Si el remanente si es mayor a cero se envia a los campos de remanente y se suma a la parte no Deducible del comprobante
+		{
+			document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = dosDecim(remamente);
+			actualizaKW('posicion', tipoGasto, handle, 'remamente', dosDecim(remamente));
+			subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(remamente)).toFixed(2);
+			switch(tipoG)
+			{
+				case 1:
+					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ish').value = dosDecim(remamente);
+					actualizaKW('posicion', tipoGasto, handle, 'impLoc', dosDecim(remamente));
+					break;
 			}
 		}
 
 		switch(tipoG)
 		{
-			//Definición de campos especificos por tipo de gasto
-			case 1:
-				remamente = (totalFact - ((otro_subtot + otro_iva) + (subtot + iva))).toFixed(2); //Se determina si existe algun remanente de la suma de los IVAS y Subtotales contra el Total Neto del Comprobante
-				if(remamente<0) //Si el remanente es menor a cero se determina como no existente
+			case 1,2,11,14:
+				servicio = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_servicio').value);
+				if(servicio>0) //En caso de existir propina en el comprobante, esta se suma a la parte No Deducible del Comprobante
 				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = 0;
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ish').value = 0;
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', 0);
-					actualizaKW('posicion', tipoGasto, handle, 'impLoc', 0);
+					subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(servicio)).toFixed(2);
 				}
-				else //Si el remanente si es mayor a cero se envia a los campos de remanente y se suma a la parte no Deducible del comprobante
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = dosDecim(remamente);
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ish').value = dosDecim(remamente);
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', dosDecim(remamente));
-					actualizaKW('posicion', tipoGasto, handle, 'impLoc', dosDecim(remamente));
-					subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(remamente)).toFixed(2);
-				}
-				break;
+			break;
 		}
-
-		servicio = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_servicio').value);
-		if(servicio>0) //En caso de existir propina en el comprobante, esta se suma a la parte No Deducible del Comprobante
-		{
-			subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(servicio)).toFixed(2);
-		}
-
 		//alert('Rubro='+ tipoG +'\n pol_tFiscNac=' + pol_tFiscNac + '\n pol_tFiscExt=' + pol_tFiscExt + '\n pol_unidadFis=' + pol_unidadFis + '\n valorIva=' + valorIva + '\n subtot=' + subtot + '\n iva=' + iva  + '\n pol_TopeFiscNac=' + pol_TopeFiscNac + '\n subtotDed=' + subtotDed + '\n subtotNoDed=' + subtotNoDed + '\n ivaAcred=' + ivaAcred + '\n ivaNoAcred=' + ivaNoAcred);
 
 		//Se actualizan los montos Deducible, No Deducible, IVA Acreditable e IVA No Acreditable en la parte Gráfica de los capos del comprobante en el Formulario y en las KW's correspondientes en el KWTG GV - Posiciones
@@ -2401,9 +2504,18 @@ function sumaMontos(tipoGasto)
 		actualizaKW('posicion', tipoGasto, handle, 'noDed', dosDecim(subtotNoDed));
 		actualizaKW('posicion', tipoGasto, handle, 'ivaNoAcre', dosDecim(ivaNoAcred));
 
+		switch(tipoG)
+		{
+			case 1:
+
+				break;
+			default:
+				actualizaKW('posicion', tipoGasto, handle, 'impLoc', 0);
+				break;
+		}
 	}
 
-	//Al termino de recorrer todos los comproantes del tipo de gasto, se determinan las variables acumuladoras siguientes
+	//Al termino de recorrer todos los comprobantes del tipo de gasto, se determinan las variables acumuladoras siguientes
 	var sumDed = 0.0;
 	var sumNoDed = 0.0;
 	var sumIVA = 0.0;
@@ -2412,6 +2524,12 @@ function sumaMontos(tipoGasto)
 	var sumServ = 0.0;
 	var sumNoches = 0;
 	var sumReman = 0;
+	var sumPersonas = 0;
+	var sumComidas = 0;
+	var sumKms = 0;
+	var sumViajes = 0;
+	var sumLts = 0;
+	var sumDias = 0;
 	for(var n = 1; n<= countFact; n++) //Volvemos a recorrer todos los comprobantes del Tipo de Gasto
 	{
 		var ded = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ded').value; //Obtiene la parte Deducible del Comprobante
@@ -2426,26 +2544,124 @@ function sumaMontos(tipoGasto)
 		var noIVA = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaNoAcre').value; //Obtiene la parte de IVA No Acreditable del Comprobante
 		if (noIVA=='') noIVA = 0; //Evalua si esta vacia la parte de IVA No Acreditable y en ese caso la establece en cero
 		sumNoIVA = ((parseFloat(sumNoIVA) + parseFloat(noIVA))).toFixed(2); //Suma en la variable acumuladora la parte de IVA No Acreditable
-		var ImpLoc = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ish').value; //Obtiene la parte de Impuesto Local (ISH) del Comprobante
-		if (ImpLoc=='') ImpLoc = 0; //Evalua si esta vacia la parte de Impuesto Local (ISH) y en ese caso la establece en cero
-		sumImpLoc = ((parseFloat(sumImpLoc) + parseFloat(ImpLoc))).toFixed(2); //Suma en la variable acumuladora la parte de Impuesto Local (ISH)
-		var serv = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_servicio').value; //Obtiene la parte de Propina del Comprobante
-		if (serv=='') serv = 0; //Evalua si esta vacia la parte de Propina y en ese caso la establece en cero
-		sumServ = ((parseFloat(sumServ) + parseFloat(serv))).toFixed(2); //Suma en la variable acumuladora la parte de Propina
-		var noches = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_noches').value; //Obtiene la parte de Cantidad de noches de Hospedaje del Comprobante
-		if (noches=='') noches = 0; //Evalua si esta vacia la parte de Cant Noches y en ese caso la establece en cero
-		sumNoches = ((parseFloat(sumNoches) + parseFloat(noches))).toFixed(2); //Suma en la variable acumuladora la parte de Cant Noches
 		var remamente = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_remamente').value; //Obtiene la parte de Remanente del Comprobante
 		if (remamente=='') remamente = 0; //Evalua si esta vacia la parte de Remanente y en ese caso la establece en cero
 		sumReman = ((parseFloat(sumReman) + parseFloat(remamente))).toFixed(2); //Suma en la variable acumuladora la parte de Remanente
 		//alert('xFact n='+n+' sumDed='+ sumDed +' sumNoDed='+sumNoDed);
+
+		switch(tipoG)
+		{
+			case 1:
+				var ImpLoc = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ish').value; //Obtiene la parte de Impuesto Local (ISH) del Comprobante
+				if (ImpLoc=='') ImpLoc = 0; //Evalua si esta vacia la parte de Impuesto Local (ISH) y en ese caso la establece en cero
+				sumImpLoc = ((parseFloat(sumImpLoc) + parseFloat(ImpLoc))).toFixed(2); //Suma en la variable acumuladora la parte de Impuesto Local (ISH)
+				var noches = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_noches').value; //Obtiene la parte de Cantidad de noches de Hospedaje del Comprobante
+				if (noches=='') noches = 0; //Evalua si esta vacia la parte de Cant Noches y en ese caso la establece en cero
+				sumNoches = ((parseFloat(sumNoches) + parseFloat(noches))).toFixed(2); //Suma en la variable acumuladora la parte de Cant Noches
+				var serv = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_servicio').value; //Obtiene la parte de Propina del Comprobante
+				if (serv=='') serv = 0; //Evalua si esta vacia la parte de Propina y en ese caso la establece en cero
+				sumServ = ((parseFloat(sumServ) + parseFloat(serv))).toFixed(2); //Suma en la variable acumuladora la parte de Propina
+				break;
+			case 2:
+				var personas = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_personas').value;
+				if (personas=='') personas = 0;
+				sumPersonas = ((parseFloat(sumPersonas) + parseInt(personas))).toFixed(2);
+				var comidas = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_comidas').value;
+				if (comidas=='') comidas = 0;
+				sumComidas = ((parseFloat(sumComidas) + parseInt(comidas))).toFixed(2);
+				var serv = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_servicio').value; //Obtiene la parte de Propina del Comprobante
+				if (serv=='') serv = 0; //Evalua si esta vacia la parte de Propina y en ese caso la establece en cero
+				sumServ = ((parseFloat(sumServ) + parseFloat(serv))).toFixed(2); //Suma en la variable acumuladora la parte de Propina
+				break;
+			case 4:
+				var kms = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_kms').value;
+				if (kms=='') kms = 0;
+				sumKms = ((parseFloat(sumKms) + parseFloat(kms))).toFixed(2);
+				break;
+			case 5:
+				var viajes = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_viajes').value;
+				if (viajes=='') viajes = 0;
+				sumViajes = ((parseFloat(sumViajes) + parseFloat(viajes))).toFixed(2);
+				break;
+			case 8:
+				var km = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_kms').value;
+				if (km=='') km = 0;
+				sumKms = sumKms + parseInt(km);
+				var lts = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_litros').value;
+				if (lts=='') lts = 0;
+				sumLts = sumLts + parseInt(lts);
+				break;
+			case 10:
+				var dias = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_dias').value;
+				if (dias=='') dias = 0;
+				sumDias = ((parseFloat(sumDias) + parseFloat(dias))).toFixed(2);
+				break;
+			case 11:
+				var serv = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_servicio').value;
+				if (serv=='') serv = 0;
+				sumServ = ((parseFloat(sumServ) + parseFloat(serv))).toFixed(2);
+				var personas = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_personas').value;
+				if (personas=='') personas = 0;
+				sumPersonas = sumPersonas + parseInt(personas);
+				var comidas = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_comidas').value;
+				if (comidas=='') comidas = 0;
+				break;
+			case 13:
+				var km = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_kms').value;
+				if (km=='') km = 0;
+				sumKms = sumKms + parseInt(km);
+				var lts = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_litros').value;
+				if (lts=='') lts = 0;
+				sumLts = sumLts + parseInt(lts);
+				break;
+			case 16:
+				var viajes = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_viajes').value;
+				if (viajes=='') viajes = 0;
+				sumViajes = ((parseFloat(sumViajes) + parseFloat(viajes))).toFixed(2);
+				break;
+		}
 	}
 
 	//Se actualizan los montos Deducible, No Deducible, IVA Acreditable e IVA No Acreditable en la parte Grafica de los capos del comprobante en el Formulario y en las KW's correspondientes en el KWTG GV - Sumas
-	document.getElementById('sum_tipo'+tipoGasto+'_serv').value = dosDecim(sumServ);
-	document.getElementById('sum_tipo'+tipoGasto+'_noches').value = dosDecim(sumNoches);
-	document.getElementById('sum_tipo'+tipoGasto+'_ish').value = dosDecim(sumImpLoc);
-	
+	switch(tipoG)
+	{
+		case 1:
+			document.getElementById('sum_tipo'+tipoGasto+'_noches').value = dosDecim(sumNoches);
+			document.getElementById('sum_tipo'+tipoGasto+'_ish').value = dosDecim(sumImpLoc);
+			document.getElementById('sum_tipo'+tipoGasto+'_serv').value = dosDecim(sumServ);
+			break;
+		case 2:
+			document.getElementById('sum_tipo'+tipoGasto+'_serv').value = dosDecim(sumServ);
+			document.getElementById('sum_tipo'+tipoGasto+'_personas').value = dosDecim(sumPersonas);
+			document.getElementById('sum_tipo'+tipoGasto+'_comidas').value = dosDecim(sumComidas);
+			break;
+		case 4:
+			document.getElementById('sum_tipo'+tipoGasto+'_kms').value = dosDecim(sumKms);
+			break;
+		case 5:
+			document.getElementById('sum_tipo'+tipoGasto+'_viajes').value = dosDecim(sumViajes);
+			break;
+		case 8:
+			document.getElementById('sum_tipo'+tipoGasto+'_kms').value = sumKms;
+			document.getElementById('sum_tipo'+tipoGasto+'_litros').value = dosDecim(sumLts);
+			break;
+		case 10:
+			document.getElementById('sum_tipo'+tipoGasto+'_dias').value = dosDecim(sumDias);
+			break;
+		case 11:
+			document.getElementById('sum_tipo'+tipoGasto+'_serv').value = dosDecim(sumServ);
+			document.getElementById('sum_tipo'+tipoGasto+'_personas').value = dosDecim(sumPersonas);
+			document.getElementById('sum_tipo'+tipoGasto+'_comidas').value = dosDecim(sumComidas);
+			break;
+		case 13:
+			document.getElementById('sum_tipo'+tipoGasto+'_kms').value = sumKms;
+			document.getElementById('sum_tipo'+tipoGasto+'_litros').value = dosDecim(sumLts);
+			break;
+		case 16:
+			document.getElementById('sum_tipo'+tipoGasto+'_viajes').value = dosDecim(sumViajes);
+			break;
+	}
+		
 	document.getElementById('mto_tipo'+tipoGasto+'_ded').innerHTML = dosDecim(sumDed);
 	document.getElementById('mto_tipo'+tipoGasto+'_noded').innerHTML = dosDecim(sumNoDed);
 	document.getElementById('mto_tipo'+tipoGasto+'_iva').innerHTML = dosDecim(sumIVA);
@@ -2466,4262 +2682,6 @@ function sumaMontos(tipoGasto)
 	sumTotIVAnoAcre = (parseFloat(sumTotIVAnoAcre) + parseFloat(sumNoIVA)).toFixed(2);
 	sumTotComp = (parseFloat(sumTotComp) + parseFloat(sumDed) + parseFloat(sumNoDed) + parseFloat(sumIVA) + parseFloat(sumNoIVA)).toFixed(2);
 
-	//La validación por cada Comprobante de cada tipo de gasto se realiza a continuación, se tiene en un Switch Case y con codigo repetido debido a que en el usuario dijo en todo momento que cada tipo de gasto tiene distintas validaciones y distintas reglas que determinarian que sea deducible o no, por lo que se determinó que cada tipo de gasto fuera un case distinto
-	//Sin embargo al termino del desarrollo de este formulario (Mayo-2018) todos los casos conllevan el mismo tratamiento, por lo que solo encontrará comentado el codigo del Tipo de gasto 1
-	
-	/*
-	switch(tipoG)
-	{
-		//Validaciones Fiscales y determinación de montos deducibles para Tipo Gasto 1 (Hospedaje)
-		case 1:
-		break;
-		case 2:
-			for(var i = 1; i<= countFact; i++)
-			{
-				//alert(i);
-
-				handle = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_handle').value;
-				tipoFact = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tipoFact').value;
-				totalFact = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_totFact').value);
-				subtot = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_subtotFact').value);
-				iva = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaFact').value);
-				tipoPago = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tPago').value;
-				cantItems = parseInt(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_cantItems').value, 10);
-				desgloce = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_desgloce').value;
-				var desgloces = desgloce.split('-');
-				var otro_subtot = 0;
-				var otro_iva = 0;
-				
-				if(desgloce!='')
-				{
-					subtot = 0;
-					iva = 0;
-					for(r=1;r<=250;r++)
-					{
-						handleItem = document.getElementById('OBKey__572_'+r).value;
-						if(handleItem!='')
-						{
-							if(handleItem==handle)
-							{
-								tGastoItem = document.getElementById('OBKey__620_'+r).value;
-
-								if(tipoGasto==tGastoItem)
-								{
-									subtot = subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									tmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(tmp_iva!='')
-									{
-										iva = iva + parseFloat(tmp_iva);
-									}
-								}
-								else
-								{
-									otro_subtot = otro_subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									otrotmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(otrotmp_iva!='')
-									{
-										otro_iva = otro_iva + parseFloat(otrotmp_iva);
-									}
-								}
-
-							}
-						}
-						else
-						{
-							break;
-						}
-					}
-				}
-
-				var subtotDed = 0;
-				var subtotNoDed = 0;
-				var ivaAcred = 0;
-				var ivaNoAcred = 0;
-				var unidadPorcentaje = 0;
-				if((tipoFact == 'IMG') || (tipoFact == 'SCOMP'))
-				{
-					subtotDed = 0;
-					subtotNoDed = subtot;
-					ivaAcred = 0;
-					ivaNoAcred = iva;
-				}
-				else
-				{
-					if(tipoPago=='1')
-					{
-						if(totalFact<=topeFisEfectivo)
-						{
-							if(pol_tFiscExt)	
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscExt)
-									{
-										subtotDed = pol_TopeFiscExt;
-										subtotNoDed = subtot - pol_TopeFiscExt;
-										ivaAcred = pol_TopeFiscExt * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscExt;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscExt;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else if(pol_tFiscNac)
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscNac)
-									{
-										subtotDed = pol_TopeFiscNac;
-										subtotNoDed = subtot - pol_TopeFiscNac;
-										ivaAcred = pol_TopeFiscNac * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-									
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscNac;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscNac;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else
-							{
-								subtotDed = subtot;
-								subtotNoDed = 0;
-								ivaAcred = iva;
-								ivaNoAcred = 0;
-							}
-						}
-						else
-						{
-							subtotDed = 0;
-							subtotNoDed = subtot;
-							ivaAcred = 0;
-							ivaNoAcred = iva;
-						}
-					}
-					else
-					{
-						if(pol_tFiscExt)	
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscExt)
-								{
-									subtotDed = pol_TopeFiscExt;
-									subtotNoDed = subtot - pol_TopeFiscExt;
-									ivaAcred = pol_TopeFiscExt * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscExt;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscExt;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else if(pol_tFiscNac)
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscNac)
-								{
-									subtotDed = pol_TopeFiscNac;
-									subtotNoDed = subtot - pol_TopeFiscNac;
-									ivaAcred = pol_TopeFiscNac * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-								
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscNac;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscNac;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else
-						{
-							subtotDed = subtot;
-							subtotNoDed = 0;
-							ivaAcred = iva;
-							ivaNoAcred = 0;
-						}
-					}
-				}
-				
-				//alert('Rubro='+ tipoG +'\n pol_tFiscNac=' + pol_tFiscNac + '\n pol_tFiscExt=' + pol_tFiscExt + '\n pol_unidadFis=' + pol_unidadFis + '\n valorIva=' + valorIva + '\n subtot=' + subtot + '\n iva=' + iva  + '\n pol_TopeFiscNac=' + pol_TopeFiscNac + '\n subtotDed=' + subtotDed + '\n subtotNoDed=' + subtotNoDed + '\n ivaAcred=' + ivaAcred + '\n ivaNoAcred=' + ivaNoAcred);
-
-				remamente = (totalFact - ((otro_subtot + otro_iva) + (subtot + iva))).toFixed(2);
-				if(remamente<0)
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = 0;
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', 0);
-				}
-				else
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = dosDecim(remamente);
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', dosDecim(remamente));
-					subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(remamente)).toFixed(2);
-				}
-
-				servicio = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_servicio').value);
-				if(servicio>0)
-				{
-					subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(servicio)).toFixed(2);
-				}
-
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ded').value = dosDecim(subtotDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaAcre').value = dosDecim(ivaAcred);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_noded').value = dosDecim(subtotNoDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaNoAcre').value = dosDecim(ivaNoAcred);
-				actualizaKW('posicion', tipoGasto, handle, 'ded', dosDecim(subtotDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaAcre', dosDecim(ivaAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'noDed', dosDecim(subtotNoDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaNoAcre', dosDecim(ivaNoAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'impLoc', 0);
-			}
-			var sumDed = 0.0;
-			var sumNoDed = 0.0;
-			var sumIVA = 0.0;
-			var sumNoIVA = 0.0;
-			var sumServ = 0.0;
-			var sumPersonas = 0;
-			var sumComidas = 0.0;
-			var sumReman = 0;
-			for(var n = 1; n<= countFact; n++)
-			{
-				var ded = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ded').value;
-				if (ded=='') ded = 0;
-				sumDed = ((parseFloat(sumDed) + parseFloat(ded))).toFixed(2);
-				var NoDed = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_noded').value;
-				if (NoDed=='') NoDed = 0;
-				sumNoDed = ((parseFloat(sumNoDed) + parseFloat(NoDed))).toFixed(2);
-				var iva = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaAcre').value;
-				if (iva=='') iva = 0;
-				sumIVA = ((parseFloat(sumIVA) + parseFloat(iva))).toFixed(2);
-				var noIVA = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaNoAcre').value;
-				if (noIVA=='') noIVA = 0;
-				sumNoIVA = ((parseFloat(sumNoIVA) + parseFloat(noIVA))).toFixed(2);
-				var serv = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_servicio').value;
-				if (serv=='') serv = 0;
-				sumServ = ((parseFloat(sumServ) + parseFloat(serv))).toFixed(2);
-				var personas = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_personas').value;
-				if (personas=='') personas = 0;
-				sumPersonas = ((parseFloat(sumPersonas) + parseInt(personas))).toFixed(2);
-				var comidas = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_comidas').value;
-				if (comidas=='') comidas = 0;
-				sumComidas = ((parseFloat(sumComidas) + parseInt(comidas))).toFixed(2);
-				var remamente = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_remamente').value;
-				if (remamente=='') remamente = 0;
-				sumReman = ((parseFloat(sumReman) + parseFloat(remamente))).toFixed(2);
-			}
-			document.getElementById('sum_tipo'+tipoGasto+'_serv').value = dosDecim(sumServ);
-			document.getElementById('sum_tipo'+tipoGasto+'_personas').value = dosDecim(sumPersonas);
-			document.getElementById('sum_tipo'+tipoGasto+'_comidas').value = dosDecim(sumComidas);
-				
-			document.getElementById('mto_tipo'+tipoGasto+'_ded').innerHTML = dosDecim(sumDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_noded').innerHTML = dosDecim(sumNoDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_iva').innerHTML = dosDecim(sumIVA);
-			document.getElementById('mto_tipo'+tipoGasto+'_noiva').innerHTML = dosDecim(sumNoIVA);
-
-			var concatDet = sumPersonas + '-' + sumComidas;
-
-			actualizaKW('sumas', tipoGasto, '', 'ded', dosDecim(sumDed));
-			actualizaKW('sumas', tipoGasto, '', 'noDed', dosDecim(sumNoDed));
-			actualizaKW('sumas', tipoGasto, '', 'ivaAcre', dosDecim(sumIVA));
-			actualizaKW('sumas', tipoGasto, '', 'ivaNoAcre', dosDecim(sumNoIVA));
-			actualizaKW('sumas', tipoGasto, '', 'serv', dosDecim(sumServ));
-			actualizaKW('sumas', tipoGasto, '', 'detGast', dosDecim(concatDet));
-
-			sumTotDed = (parseFloat(sumTotDed) + parseFloat(sumDed)).toFixed(2);
-			sumTotNoDed = (parseFloat(sumTotNoDed) + parseFloat(sumNoDed)).toFixed(2);
-			sumTotIVAAcre = (parseFloat(sumTotIVAAcre) + parseFloat(sumIVA)).toFixed(2);
-			sumTotIVAnoAcre = (parseFloat(sumTotIVAnoAcre) + parseFloat(sumNoIVA)).toFixed(2);
-			sumTotComp = (parseFloat(sumTotComp) + parseFloat(sumDed) + parseFloat(sumNoDed) + parseFloat(sumIVA) + parseFloat(sumNoIVA)).toFixed(2);
-		break;
-		case 4:
-			for(var i = 1; i<= countFact; i++)
-			{
-				handle = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_handle').value;
-				tipoFact = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tipoFact').value;
-				totalFact = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_totFact').value);
-				subtot = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_subtotFact').value);
-				iva = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaFact').value);
-				tipoPago = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tPago').value;
-				cantItems = parseInt(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_cantItems').value, 10);
-				desgloce = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_desgloce').value;
-				var desgloces = desgloce.split('-');
-				var otro_subtot = 0;
-				var otro_iva = 0;
-				if(desgloce!='')
-				{
-					subtot = 0;
-					iva = 0;
-					for(r=1;r<=250;r++)
-					{
-						handleItem = document.getElementById('OBKey__572_'+r).value;
-						if(handleItem!='')
-						{
-							if(handleItem==handle)
-							{
-								tGastoItem = document.getElementById('OBKey__620_'+r).value;
-
-								if(tipoGasto==tGastoItem)
-								{
-									subtot = subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									tmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(tmp_iva!='')
-									{
-										iva = iva + parseFloat(tmp_iva);
-									}
-								}
-								else
-								{
-									otro_subtot = otro_subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									otrotmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(otrotmp_iva!='')
-									{
-										otro_iva = otro_iva + parseFloat(otrotmp_iva);
-									}
-								}
-
-							}
-						}
-						else
-						{
-							break;
-						}
-					}
-				}
-				var subtotDed = 0;
-				var subtotNoDed = 0;
-				var ivaAcred = 0;
-				var ivaNoAcred = 0;
-				var unidadPorcentaje = 0;
-				if((tipoFact == 'IMG') || (tipoFact == 'SCOMP'))
-				{
-					subtotDed = 0;
-					subtotNoDed = subtot;
-					ivaAcred = 0;
-					ivaNoAcred = iva;
-				}
-				else
-				{
-					if(tipoPago=='1')
-					{
-						if(totalFact<=topeFisEfectivo)
-						{
-							if(pol_tFiscExt)	
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscExt)
-									{
-										subtotDed = pol_TopeFiscExt;
-										subtotNoDed = subtot - pol_TopeFiscExt;
-										ivaAcred = pol_TopeFiscExt * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscExt;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscExt;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else if(pol_tFiscNac)
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscNac)
-									{
-										subtotDed = pol_TopeFiscNac;
-										subtotNoDed = subtot - pol_TopeFiscNac;
-										ivaAcred = pol_TopeFiscNac * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-									
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscNac;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscNac;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else
-							{
-								subtotDed = subtot;
-								subtotNoDed = 0;
-								ivaAcred = iva;
-								ivaNoAcred = 0;
-							}
-						}
-						else
-						{
-							subtotDed = 0;
-							subtotNoDed = subtot;
-							ivaAcred = 0;
-							ivaNoAcred = iva;
-						}
-					}
-					else
-					{
-						if(pol_tFiscExt)	
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscExt)
-								{
-									subtotDed = pol_TopeFiscExt;
-									subtotNoDed = subtot - pol_TopeFiscExt;
-									ivaAcred = pol_TopeFiscExt * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscExt;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscExt;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else if(pol_tFiscNac)
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscNac)
-								{
-									subtotDed = pol_TopeFiscNac;
-									subtotNoDed = subtot - pol_TopeFiscNac;
-									ivaAcred = pol_TopeFiscNac * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-								
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscNac;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscNac;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else
-						{
-							subtotDed = subtot;
-							subtotNoDed = 0;
-							ivaAcred = iva;
-							ivaNoAcred = 0;
-						}
-					}
-				}
-				
-				//alert('Rubro='+ tipoG +'\n pol_tFiscNac=' + pol_tFiscNac + '\n pol_tFiscExt=' + pol_tFiscExt + '\n pol_unidadFis=' + pol_unidadFis + '\n valorIva=' + valorIva + '\n subtot=' + subtot + '\n iva=' + iva  + '\n pol_TopeFiscNac=' + pol_TopeFiscNac + '\n subtotDed=' + subtotDed + '\n subtotNoDed=' + subtotNoDed + '\n ivaAcred=' + ivaAcred + '\n ivaNoAcred=' + ivaNoAcred);
-
-				remamente = (totalFact - ((otro_subtot + otro_iva) + (subtot + iva))).toFixed(2);
-				if(remamente<0)
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = 0;
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', 0);
-				}
-				else
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = dosDecim(remamente);
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', dosDecim(remamente));
-					subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(remamente)).toFixed(2);
-				}
-
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ded').value = dosDecim(subtotDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaAcre').value = dosDecim(ivaAcred);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_noded').value = dosDecim(subtotNoDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaNoAcre').value = dosDecim(ivaNoAcred);
-				actualizaKW('posicion', tipoGasto, handle, 'ded', dosDecim(subtotDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaAcre', dosDecim(ivaAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'noDed', dosDecim(subtotNoDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaNoAcre', dosDecim(ivaNoAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'impLoc', 0);
-			}
-			var sumDed = 0.0;
-			var sumNoDed = 0.0;
-			var sumIVA = 0.0;
-			var sumNoIVA = 0.0;
-			var sumKms = 0.0;
-			var sumReman = 0;
-			for(var n = 1; n<= countFact; n++)
-			{
-				var ded = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ded').value;
-				if (ded=='') ded = 0;
-				sumDed = ((parseFloat(sumDed) + parseFloat(ded))).toFixed(2);
-				var NoDed = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_noded').value;
-				if (NoDed=='') NoDed = 0;
-				sumNoDed = ((parseFloat(sumNoDed) + parseFloat(NoDed))).toFixed(2);
-				var iva = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaAcre').value;
-				if (iva=='') iva = 0;
-				sumIVA = ((parseFloat(sumIVA) + parseFloat(iva))).toFixed(2);
-				var noIVA = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaNoAcre').value;
-				if (noIVA=='') noIVA = 0;
-				sumNoIVA = ((parseFloat(sumNoIVA) + parseFloat(noIVA))).toFixed(2);
-				var kms = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_kms').value;
-				if (kms=='') kms = 0;
-				sumKms = ((parseFloat(sumKms) + parseFloat(kms))).toFixed(2);
-				var remamente = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_remamente').value;
-				if (remamente=='') remamente = 0;
-				sumReman = ((parseFloat(sumReman) + parseFloat(remamente))).toFixed(2);
-			}
-			document.getElementById('sum_tipo'+tipoGasto+'_kms').value = dosDecim(sumKms);
-			
-			document.getElementById('mto_tipo'+tipoGasto+'_ded').innerHTML = dosDecim(sumDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_noded').innerHTML = dosDecim(sumNoDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_iva').innerHTML = dosDecim(sumIVA);
-			document.getElementById('mto_tipo'+tipoGasto+'_noiva').innerHTML = dosDecim(sumNoIVA);
-
-			actualizaKW('sumas', tipoGasto, '', 'ded', dosDecim(sumDed));
-			actualizaKW('sumas', tipoGasto, '', 'noDed', dosDecim(sumNoDed));
-			actualizaKW('sumas', tipoGasto, '', 'ivaAcre', dosDecim(sumIVA));
-			actualizaKW('sumas', tipoGasto, '', 'ivaNoAcre', dosDecim(sumNoIVA));
-			actualizaKW('sumas', tipoGasto, '', 'detGast', dosDecim(sumKms));
-
-			sumTotDed = (parseFloat(sumTotDed) + parseFloat(sumDed)).toFixed(2);
-			sumTotNoDed = (parseFloat(sumTotNoDed) + parseFloat(sumNoDed)).toFixed(2);
-			sumTotIVAAcre = (parseFloat(sumTotIVAAcre) + parseFloat(sumIVA)).toFixed(2);
-			sumTotIVAnoAcre = (parseFloat(sumTotIVAnoAcre) + parseFloat(sumNoIVA)).toFixed(2);
-			sumTotComp = (parseFloat(sumTotComp) + parseFloat(sumDed) + parseFloat(sumNoDed) + parseFloat(sumIVA) + parseFloat(sumNoIVA)).toFixed(2);
-		break;
-		case 5:
-			for(var i = 1; i<= countFact; i++)
-			{
-				handle = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_handle').value;
-				tipoFact = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tipoFact').value;
-				totalFact = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_totFact').value);
-				subtot = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_subtotFact').value);
-				iva = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaFact').value);
-				tipoPago = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tPago').value;
-				cantItems = parseInt(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_cantItems').value, 10);
-				desgloce = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_desgloce').value;
-				var desgloces = desgloce.split('-');
-				var otro_subtot = 0;
-				var otro_iva = 0;
-				if(desgloce!='')
-				{
-					subtot = 0;
-					iva = 0;
-					for(r=1;r<=250;r++)
-					{
-						handleItem = document.getElementById('OBKey__572_'+r).value;
-						if(handleItem!='')
-						{
-							if(handleItem==handle)
-							{
-								tGastoItem = document.getElementById('OBKey__620_'+r).value;
-
-								if(tipoGasto==tGastoItem)
-								{
-									subtot = subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									tmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(tmp_iva!='')
-									{
-										iva = iva + parseFloat(tmp_iva);
-									}
-								}
-								else
-								{
-									otro_subtot = otro_subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									otrotmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(otrotmp_iva!='')
-									{
-										otro_iva = otro_iva + parseFloat(otrotmp_iva);
-									}
-								}
-
-							}
-						}
-						else
-						{
-							break;
-						}
-					}
-				}
-				var subtotDed = 0;
-				var subtotNoDed = 0;
-				var ivaAcred = 0;
-				var ivaNoAcred = 0;
-				var unidadPorcentaje = 0;
-				if((tipoFact == 'IMG') || (tipoFact == 'SCOMP'))
-				{
-					subtotDed = 0;
-					subtotNoDed = subtot;
-					ivaAcred = 0;
-					ivaNoAcred = iva;
-				}
-				else
-				{
-					if(tipoPago=='1')
-					{
-						if(totalFact<=topeFisEfectivo)
-						{
-							if(pol_tFiscExt)	
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscExt)
-									{
-										subtotDed = pol_TopeFiscExt;
-										subtotNoDed = subtot - pol_TopeFiscExt;
-										ivaAcred = pol_TopeFiscExt * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscExt;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscExt;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else if(pol_tFiscNac)
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscNac)
-									{
-										subtotDed = pol_TopeFiscNac;
-										subtotNoDed = subtot - pol_TopeFiscNac;
-										ivaAcred = pol_TopeFiscNac * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-									
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscNac;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscNac;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else
-							{
-								subtotDed = subtot;
-								subtotNoDed = 0;
-								ivaAcred = iva;
-								ivaNoAcred = 0;
-							}
-						}
-						else
-						{
-							subtotDed = 0;
-							subtotNoDed = subtot;
-							ivaAcred = 0;
-							ivaNoAcred = iva;
-						}
-					}
-					else
-					{
-						if(pol_tFiscExt)	
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscExt)
-								{
-									subtotDed = pol_TopeFiscExt;
-									subtotNoDed = subtot - pol_TopeFiscExt;
-									ivaAcred = pol_TopeFiscExt * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscExt;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscExt;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else if(pol_tFiscNac)
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscNac)
-								{
-									subtotDed = pol_TopeFiscNac;
-									subtotNoDed = subtot - pol_TopeFiscNac;
-									ivaAcred = pol_TopeFiscNac * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-								
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscNac;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscNac;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else
-						{
-							subtotDed = subtot;
-							subtotNoDed = 0;
-							ivaAcred = iva;
-							ivaNoAcred = 0;
-						}
-					}
-				}
-				
-				//alert('Rubro='+ tipoG +'\n pol_tFiscNac=' + pol_tFiscNac + '\n pol_tFiscExt=' + pol_tFiscExt + '\n pol_unidadFis=' + pol_unidadFis + '\n valorIva=' + valorIva + '\n subtot=' + subtot + '\n iva=' + iva  + '\n pol_TopeFiscNac=' + pol_TopeFiscNac + '\n subtotDed=' + subtotDed + '\n subtotNoDed=' + subtotNoDed + '\n ivaAcred=' + ivaAcred + '\n ivaNoAcred=' + ivaNoAcred);
-
-				remamente = (totalFact - ((otro_subtot + otro_iva) + (subtot + iva))).toFixed(2);
-				if(remamente<0)
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = 0;
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', 0);
-				}
-				else
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = dosDecim(remamente);
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', dosDecim(remamente));
-					subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(remamente)).toFixed(2);
-				}
-
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ded').value = dosDecim(subtotDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaAcre').value = dosDecim(ivaAcred);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_noded').value = dosDecim(subtotNoDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaNoAcre').value = dosDecim(ivaNoAcred);
-				actualizaKW('posicion', tipoGasto, handle, 'ded', dosDecim(subtotDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaAcre', dosDecim(ivaAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'noDed', dosDecim(subtotNoDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaNoAcre', dosDecim(ivaNoAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'impLoc', 0);
-			}
-			var sumDed = 0.0;
-			var sumNoDed = 0.0;
-			var sumIVA = 0.0;
-			var sumNoIVA = 0.0;
-			var sumViajes = 0;
-			var sumReman = 0;
-			for(var n = 1; n<= countFact; n++)
-			{
-				var ded = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ded').value;
-				if (ded=='') ded = 0;
-				sumDed = ((parseFloat(sumDed) + parseFloat(ded))).toFixed(2);
-				var NoDed = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_noded').value;
-				if (NoDed=='') NoDed = 0;
-				sumNoDed = ((parseFloat(sumNoDed) + parseFloat(NoDed))).toFixed(2);
-				var iva = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaAcre').value;
-				if (iva=='') iva = 0;
-				sumIVA = ((parseFloat(sumIVA) + parseFloat(iva))).toFixed(2);
-				var noIVA = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaNoAcre').value;
-				if (noIVA=='') noIVA = 0;
-				sumNoIVA = ((parseFloat(sumNoIVA) + parseFloat(noIVA))).toFixed(2);
-				var viajes = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_viajes').value;
-				if (viajes=='') viajes = 0;
-				sumViajes = ((parseFloat(sumViajes) + parseFloat(viajes))).toFixed(2);
-				var remamente = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_remamente').value;
-				if (remamente=='') remamente = 0;
-				sumReman = ((parseFloat(sumReman) + parseFloat(remamente))).toFixed(2);
-			}
-			document.getElementById('sum_tipo'+tipoGasto+'_viajes').value = dosDecim(sumViajes);
-			
-			document.getElementById('mto_tipo'+tipoGasto+'_ded').innerHTML = dosDecim(sumDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_noded').innerHTML = dosDecim(sumNoDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_iva').innerHTML = dosDecim(sumIVA);
-			document.getElementById('mto_tipo'+tipoGasto+'_noiva').innerHTML = dosDecim(sumNoIVA);
-
-			actualizaKW('sumas', tipoGasto, '', 'ded', dosDecim(sumDed));
-			actualizaKW('sumas', tipoGasto, '', 'noDed', dosDecim(sumNoDed));
-			actualizaKW('sumas', tipoGasto, '', 'ivaAcre', dosDecim(sumIVA));
-			actualizaKW('sumas', tipoGasto, '', 'ivaNoAcre', dosDecim(sumNoIVA));
-
-			sumTotDed = (parseFloat(sumTotDed) + parseFloat(sumDed)).toFixed(2);
-			sumTotNoDed = (parseFloat(sumTotNoDed) + parseFloat(sumNoDed)).toFixed(2);
-			sumTotIVAAcre = (parseFloat(sumTotIVAAcre) + parseFloat(sumIVA)).toFixed(2);
-			sumTotIVAnoAcre = (parseFloat(sumTotIVAnoAcre) + parseFloat(sumNoIVA)).toFixed(2);
-			sumTotComp = (parseFloat(sumTotComp) + parseFloat(sumDed) + parseFloat(sumNoDed) + parseFloat(sumIVA) + parseFloat(sumNoIVA)).toFixed(2);
-		break;
-		case 6:
-			for(var i = 1; i<= countFact; i++)
-			{
-				handle = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_handle').value;
-				tipoFact = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tipoFact').value;
-				totalFact = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_totFact').value);
-				subtot = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_subtotFact').value);
-				iva = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaFact').value);
-				tipoPago = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tPago').value;
-				cantItems = parseInt(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_cantItems').value, 10);
-				desgloce = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_desgloce').value;
-				var desgloces = desgloce.split('-');
-				var otro_subtot = 0;
-				var otro_iva = 0;
-				if(desgloce!='')
-				{
-					subtot = 0;
-					iva = 0;
-					for(r=1;r<=250;r++)
-					{
-						handleItem = document.getElementById('OBKey__572_'+r).value;
-						if(handleItem!='')
-						{
-							if(handleItem==handle)
-							{
-								tGastoItem = document.getElementById('OBKey__620_'+r).value;
-
-								if(tipoGasto==tGastoItem)
-								{
-									subtot = subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									tmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(tmp_iva!='')
-									{
-										iva = iva + parseFloat(tmp_iva);
-									}
-								}
-								else
-								{
-									otro_subtot = otro_subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									otrotmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(otrotmp_iva!='')
-									{
-										otro_iva = otro_iva + parseFloat(otrotmp_iva);
-									}
-								}
-
-							}
-						}
-						else
-						{
-							break;
-						}
-					}
-				}
-				var subtotDed = 0;
-				var subtotNoDed = 0;
-				var ivaAcred = 0;
-				var ivaNoAcred = 0;
-				var unidadPorcentaje = 0;
-				if((tipoFact == 'IMG') || (tipoFact == 'SCOMP'))
-				{
-					subtotDed = 0;
-					subtotNoDed = subtot;
-					ivaAcred = 0;
-					ivaNoAcred = iva;
-				}
-				else
-				{
-					if(tipoPago=='1')
-					{
-						if(totalFact<=topeFisEfectivo)
-						{
-							if(pol_tFiscExt)	
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscExt)
-									{
-										subtotDed = pol_TopeFiscExt;
-										subtotNoDed = subtot - pol_TopeFiscExt;
-										ivaAcred = pol_TopeFiscExt * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscExt;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscExt;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else if(pol_tFiscNac)
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscNac)
-									{
-										subtotDed = pol_TopeFiscNac;
-										subtotNoDed = subtot - pol_TopeFiscNac;
-										ivaAcred = pol_TopeFiscNac * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-									
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscNac;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscNac;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else
-							{
-								subtotDed = subtot;
-								subtotNoDed = 0;
-								ivaAcred = iva;
-								ivaNoAcred = 0;
-							}
-						}
-						else
-						{
-							subtotDed = 0;
-							subtotNoDed = subtot;
-							ivaAcred = 0;
-							ivaNoAcred = iva;
-						}
-					}
-					else
-					{
-						if(pol_tFiscExt)	
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscExt)
-								{
-									subtotDed = pol_TopeFiscExt;
-									subtotNoDed = subtot - pol_TopeFiscExt;
-									ivaAcred = pol_TopeFiscExt * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscExt;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscExt;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else if(pol_tFiscNac)
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscNac)
-								{
-									subtotDed = pol_TopeFiscNac;
-									subtotNoDed = subtot - pol_TopeFiscNac;
-									ivaAcred = pol_TopeFiscNac * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-								
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscNac;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscNac;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else
-						{
-							subtotDed = subtot;
-							subtotNoDed = 0;
-							ivaAcred = iva;
-							ivaNoAcred = 0;
-						}
-					}
-				}
-				
-				//alert('Rubro='+ tipoG +'\n pol_tFiscNac=' + pol_tFiscNac + '\n pol_tFiscExt=' + pol_tFiscExt + '\n pol_unidadFis=' + pol_unidadFis + '\n valorIva=' + valorIva + '\n subtot=' + subtot + '\n iva=' + iva  + '\n pol_TopeFiscNac=' + pol_TopeFiscNac + '\n subtotDed=' + subtotDed + '\n subtotNoDed=' + subtotNoDed + '\n ivaAcred=' + ivaAcred + '\n ivaNoAcred=' + ivaNoAcred);
-
-				remamente = (totalFact - ((otro_subtot + otro_iva) + (subtot + iva))).toFixed(2);
-				if(remamente<0)
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = 0;
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', 0);
-				}
-				else
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = dosDecim(remamente);
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', dosDecim(remamente));
-					subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(remamente)).toFixed(2);
-				}
-
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ded').value = dosDecim(subtotDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaAcre').value = dosDecim(ivaAcred);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_noded').value = dosDecim(subtotNoDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaNoAcre').value = dosDecim(ivaNoAcred);
-				actualizaKW('posicion', tipoGasto, handle, 'ded', dosDecim(subtotDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaAcre', dosDecim(ivaAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'noDed', dosDecim(subtotNoDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaNoAcre', dosDecim(ivaNoAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'impLoc', 0);
-			}
-			var sumDed = 0.0;
-			var sumNoDed = 0.0;
-			var sumIVA = 0.0;
-			var sumNoIVA = 0.0;
-			var sumReman = 0;
-			for(var n = 1; n<= countFact; n++)
-			{
-				var ded = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ded').value;
-				if (ded=='') ded = 0;
-				sumDed = ((parseFloat(sumDed) + parseFloat(ded))).toFixed(2);
-				var NoDed = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_noded').value;
-				if (NoDed=='') NoDed = 0;
-				sumNoDed = ((parseFloat(sumNoDed) + parseFloat(NoDed))).toFixed(2);
-				var iva = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaAcre').value;
-				if (iva=='') iva = 0;
-				sumIVA = ((parseFloat(sumIVA) + parseFloat(iva))).toFixed(2);
-				var noIVA = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaNoAcre').value;
-				if (noIVA=='') noIVA = 0;
-				sumNoIVA = ((parseFloat(sumNoIVA) + parseFloat(noIVA))).toFixed(2);
-				var remamente = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_remamente').value;
-				if (remamente=='') remamente = 0;
-				sumReman = ((parseFloat(sumReman) + parseFloat(remamente))).toFixed(2);
-			}
-			
-			document.getElementById('mto_tipo'+tipoGasto+'_ded').innerHTML = dosDecim(sumDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_noded').innerHTML = dosDecim(sumNoDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_iva').innerHTML = dosDecim(sumIVA);
-			document.getElementById('mto_tipo'+tipoGasto+'_noiva').innerHTML = dosDecim(sumNoIVA);
-
-			actualizaKW('sumas', tipoGasto, '', 'ded', dosDecim(sumDed));
-			actualizaKW('sumas', tipoGasto, '', 'noDed', dosDecim(sumNoDed));
-			actualizaKW('sumas', tipoGasto, '', 'ivaAcre', dosDecim(sumIVA));
-			actualizaKW('sumas', tipoGasto, '', 'ivaNoAcre', dosDecim(sumNoIVA));
-
-			sumTotDed = (parseFloat(sumTotDed) + parseFloat(sumDed)).toFixed(2);
-			sumTotNoDed = (parseFloat(sumTotNoDed) + parseFloat(sumNoDed)).toFixed(2);
-			sumTotIVAAcre = (parseFloat(sumTotIVAAcre) + parseFloat(sumIVA)).toFixed(2);
-			sumTotIVAnoAcre = (parseFloat(sumTotIVAnoAcre) + parseFloat(sumNoIVA)).toFixed(2);
-			sumTotComp = (parseFloat(sumTotComp) + parseFloat(sumDed) + parseFloat(sumNoDed) + parseFloat(sumIVA) + parseFloat(sumNoIVA)).toFixed(2);
-		break;
-		case 7:
-			for(var i = 1; i<= countFact; i++)
-			{
-				handle = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_handle').value;
-				tipoFact = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tipoFact').value;
-				totalFact = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_totFact').value);
-				subtot = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_subtotFact').value);
-				iva = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaFact').value);
-				tipoPago = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tPago').value;
-				cantItems = parseInt(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_cantItems').value, 10);
-				desgloce = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_desgloce').value;
-				var desgloces = desgloce.split('-');
-				var otro_subtot = 0;
-				var otro_iva = 0;
-				if(desgloce!='')
-				{
-					subtot = 0;
-					iva = 0;
-					for(r=1;r<=250;r++)
-					{
-						handleItem = document.getElementById('OBKey__572_'+r).value;
-						if(handleItem!='')
-						{
-							if(handleItem==handle)
-							{
-								tGastoItem = document.getElementById('OBKey__620_'+r).value;
-
-								if(tipoGasto==tGastoItem)
-								{
-									subtot = subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									tmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(tmp_iva!='')
-									{
-										iva = iva + parseFloat(tmp_iva);
-									}
-								}
-								else
-								{
-									otro_subtot = otro_subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									otrotmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(otrotmp_iva!='')
-									{
-										otro_iva = otro_iva + parseFloat(otrotmp_iva);
-									}
-								}
-
-							}
-						}
-						else
-						{
-							break;
-						}
-					}
-				}
-				var subtotDed = 0;
-				var subtotNoDed = 0;
-				var ivaAcred = 0;
-				var ivaNoAcred = 0;
-				var unidadPorcentaje = 0;
-				if((tipoFact == 'IMG') || (tipoFact == 'SCOMP'))
-				{
-					subtotDed = 0;
-					subtotNoDed = subtot;
-					ivaAcred = 0;
-					ivaNoAcred = iva;
-				}
-				else
-				{
-					if(tipoPago=='1')
-					{
-						if(totalFact<=topeFisEfectivo)
-						{
-							if(pol_tFiscExt)	
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscExt)
-									{
-										subtotDed = pol_TopeFiscExt;
-										subtotNoDed = subtot - pol_TopeFiscExt;
-										ivaAcred = pol_TopeFiscExt * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscExt;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscExt;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else if(pol_tFiscNac)
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscNac)
-									{
-										subtotDed = pol_TopeFiscNac;
-										subtotNoDed = subtot - pol_TopeFiscNac;
-										ivaAcred = pol_TopeFiscNac * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-									
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscNac;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscNac;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else
-							{
-								subtotDed = subtot;
-								subtotNoDed = 0;
-								ivaAcred = iva;
-								ivaNoAcred = 0;
-							}
-						}
-						else
-						{
-							subtotDed = 0;
-							subtotNoDed = subtot;
-							ivaAcred = 0;
-							ivaNoAcred = iva;
-						}
-					}
-					else
-					{
-						if(pol_tFiscExt)	
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscExt)
-								{
-									subtotDed = pol_TopeFiscExt;
-									subtotNoDed = subtot - pol_TopeFiscExt;
-									ivaAcred = pol_TopeFiscExt * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscExt;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscExt;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else if(pol_tFiscNac)
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscNac)
-								{
-									subtotDed = pol_TopeFiscNac;
-									subtotNoDed = subtot - pol_TopeFiscNac;
-									ivaAcred = pol_TopeFiscNac * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-								
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscNac;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscNac;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else
-						{
-							subtotDed = subtot;
-							subtotNoDed = 0;
-							ivaAcred = iva;
-							ivaNoAcred = 0;
-						}
-					}
-				}
-				
-				//alert('Rubro='+ tipoG +'\n pol_tFiscNac=' + pol_tFiscNac + '\n pol_tFiscExt=' + pol_tFiscExt + '\n pol_unidadFis=' + pol_unidadFis + '\n valorIva=' + valorIva + '\n subtot=' + subtot + '\n iva=' + iva  + '\n pol_TopeFiscNac=' + pol_TopeFiscNac + '\n subtotDed=' + subtotDed + '\n subtotNoDed=' + subtotNoDed + '\n ivaAcred=' + ivaAcred + '\n ivaNoAcred=' + ivaNoAcred);
-
-				remamente = (totalFact - ((otro_subtot + otro_iva) + (subtot + iva))).toFixed(2);
-				if(remamente<0)
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = 0;
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', 0);
-				}
-				else
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = dosDecim(remamente);
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', dosDecim(remamente));
-					subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(remamente)).toFixed(2);
-				}
-
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ded').value = dosDecim(subtotDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaAcre').value = dosDecim(ivaAcred);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_noded').value = dosDecim(subtotNoDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaNoAcre').value = dosDecim(ivaNoAcred);
-				actualizaKW('posicion', tipoGasto, handle, 'ded', dosDecim(subtotDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaAcre', dosDecim(ivaAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'noDed', dosDecim(subtotNoDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaNoAcre', dosDecim(ivaNoAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'impLoc', 0);
-			}
-			var sumDed = 0.0;
-			var sumNoDed = 0.0;
-			var sumIVA = 0.0;
-			var sumNoIVA = 0.0;
-			var sumReman = 0;
-			for(var n = 1; n<= countFact; n++)
-			{
-				var ded = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ded').value;
-				if (ded=='') ded = 0;
-				sumDed = ((parseFloat(sumDed) + parseFloat(ded))).toFixed(2);
-				var NoDed = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_noded').value;
-				if (NoDed=='') NoDed = 0;
-				sumNoDed = ((parseFloat(sumNoDed) + parseFloat(NoDed))).toFixed(2);
-				var iva = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaAcre').value;
-				if (iva=='') iva = 0;
-				sumIVA = ((parseFloat(sumIVA) + parseFloat(iva))).toFixed(2);
-				var noIVA = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaNoAcre').value;
-				if (noIVA=='') noIVA = 0;
-				sumNoIVA = ((parseFloat(sumNoIVA) + parseFloat(noIVA))).toFixed(2);
-				var remamente = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_remamente').value;
-				if (remamente=='') remamente = 0;
-				sumReman = ((parseFloat(sumReman) + parseFloat(remamente))).toFixed(2);
-			}
-			document.getElementById('mto_tipo'+tipoGasto+'_ded').innerHTML = dosDecim(sumDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_noded').innerHTML = dosDecim(sumNoDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_iva').innerHTML = dosDecim(sumIVA);
-			document.getElementById('mto_tipo'+tipoGasto+'_noiva').innerHTML = dosDecim(sumNoIVA);
-
-			actualizaKW('sumas', tipoGasto, '', 'ded', dosDecim(sumDed));
-			actualizaKW('sumas', tipoGasto, '', 'noDed', dosDecim(sumNoDed));
-			actualizaKW('sumas', tipoGasto, '', 'ivaAcre', dosDecim(sumIVA));
-			actualizaKW('sumas', tipoGasto, '', 'ivaNoAcre', dosDecim(sumNoIVA));
-
-			sumTotDed = (parseFloat(sumTotDed) + parseFloat(sumDed)).toFixed(2);
-			sumTotNoDed = (parseFloat(sumTotNoDed) + parseFloat(sumNoDed)).toFixed(2);
-			sumTotIVAAcre = (parseFloat(sumTotIVAAcre) + parseFloat(sumIVA)).toFixed(2);
-			sumTotIVAnoAcre = (parseFloat(sumTotIVAnoAcre) + parseFloat(sumNoIVA)).toFixed(2);
-			sumTotComp = (parseFloat(sumTotComp) + parseFloat(sumDed) + parseFloat(sumNoDed) + parseFloat(sumIVA) + parseFloat(sumNoIVA)).toFixed(2);
-		break;
-		case 8:
-			for(var i = 1; i<= countFact; i++)
-			{
-				handle = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_handle').value;
-				tipoFact = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tipoFact').value;
-				totalFact = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_totFact').value);
-				subtot = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_subtotFact').value);
-				iva = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaFact').value);
-				tipoPago = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tPago').value;
-				cantItems = parseInt(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_cantItems').value, 10);
-				desgloce = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_desgloce').value;
-				
-				var litros = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_litros').value);
-				var kms = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_kms').value);
-
-				var desgloces = desgloce.split('-');
-				var remamente = 0.0;
-				var otro_subtot = 0.0;
-				var otro_iva = 0.0;
-				if(desgloce!='')
-				{
-					subtot = 0;
-					iva = 0;
-					for(r=1;r<=250;r++)
-					{
-						handleItem = document.getElementById('OBKey__572_'+r).value;
-						if(handleItem!='')
-						{
-							if(handleItem==handle)
-							{
-								tGastoItem = document.getElementById('OBKey__620_'+r).value;
-
-								if(tipoGasto==tGastoItem)
-								{
-									subtot = subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									tmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(tmp_iva!='')
-									{
-										iva = iva + parseFloat(tmp_iva);
-									}
-								}
-								else
-								{
-									otro_subtot = otro_subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									otrotmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(otrotmp_iva!='')
-									{
-										otro_iva = otro_iva + parseFloat(otrotmp_iva);
-									}
-								}
-
-							}
-						}
-						else
-						{
-							break;
-						}
-					}
-				}
-				var subtotDed = 0;
-				var subtotNoDed = 0;
-				var ivaAcred = 0;
-				var ivaNoAcred = 0;
-				var unidadPorcentaje = 0;
-				if((tipoFact == 'IMG') || (tipoFact == 'SCOMP'))
-				{
-					subtotDed = 0;
-					subtotNoDed = subtot;
-					ivaAcred = 0;
-					ivaNoAcred = iva;
-				}
-				else
-				{
-					if(tipoPago=='1')
-					{
-						if(totalFact<=topeFisEfectivo)
-						{
-							if(pol_tFiscExt)	
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									mtoded = kms * pol_TopeFiscExt;
-									mtoiva = mtoded * valorIva;
-									if(subtot>mtoded)
-									{
-										subtotDed = mtoded;
-										subtotNoDed = subtot - subtotDed;
-										if(mtoiva > iva)
-										{ 
-											ivaAcred = iva;
-										}
-										else
-										{ 
-											ivaAcred = mtoiva;
-										}
-										ivaNoAcred = iva - ivaAcred;
-										if(ivaNoAcred < 0)
-										{ 
-											ivaNoAcred = 0
-										}
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-								}
-							}
-							else if(pol_tFiscNac)
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									mtoded = kms * pol_TopeFiscNac;
-									mtoiva = mtoded * valorIva;
-									if(subtot>mtoded)
-									{
-										subtotDed = mtoded;
-										subtotNoDed = subtot - subtotDed;
-										ivaAcred = mtoiva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-								}
-							}
-							else
-							{
-								subtotDed = subtot;
-								subtotNoDed = 0;
-								ivaAcred = iva;
-								ivaNoAcred = 0;
-							}
-						}
-						else
-						{
-							subtotDed = 0;
-							subtotNoDed = subtot;
-							ivaAcred = 0;
-							ivaNoAcred = iva;
-						}
-					}
-					else
-					{
-						if(pol_tFiscExt)	
-						{   
-							if(pol_unidadFis=='PESOS')
-							{
-								mtoded = kms * pol_TopeFiscExt;
-								mtoiva = mtoded * valorIva;
-								if(subtot>mtoded)
-								{
-									subtotDed = mtoded;
-									subtotNoDed = subtot - subtotDed;
-									if(mtoiva > iva)
-									{ 
-										ivaAcred = iva;
-									}
-									else
-									{ 
-										ivaAcred = mtoiva;
-									}
-									ivaNoAcred = iva - ivaAcred;
-									if(ivaNoAcred < 0)
-									{ 
-										ivaNoAcred = 0;
-									}
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-							}
-						}
-						else if(pol_tFiscNac)
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								mtoded = kms * pol_TopeFiscNac;
-								mtoiva = mtoded * valorIva;
-								if(subtot>mtoded)
-								{
-									subtotDed = mtoded;
-									subtotNoDed = subtot - subtotDed;
-									if(mtoiva > iva)
-									{ 
-										ivaAcred = iva;
-									}
-									else
-									{ 
-										ivaAcred = mtoiva;
-									}
-									ivaNoAcred = iva - ivaAcred;
-									if(ivaNoAcred < 0)
-									{ 
-										ivaNoAcred = 0;
-									}
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-							}
-						}
-						else
-						{
-							subtotDed = subtot;
-							subtotNoDed = 0;
-							ivaAcred = iva;
-							ivaNoAcred = 0;
-						}
-					}
-				}
-				
-				//alert('Rubro='+ tipoG +'\n pol_tFiscNac=' + pol_tFiscNac + '\n pol_tFiscExt=' + pol_tFiscExt + '\n pol_unidadFis=' + pol_unidadFis + '\n valorIva=' + valorIva + '\n subtot=' + subtot + '\n iva=' + iva  + '\n pol_TopeFiscNac=' + pol_TopeFiscNac + '\n subtotDed=' + subtotDed + '\n subtotNoDed=' + subtotNoDed + '\n ivaAcred=' + ivaAcred + '\n ivaNoAcred=' + ivaNoAcred);
-
-				remamente = (totalFact - ((otro_subtot + otro_iva) + (subtot + iva))).toFixed(2);
-				if(remamente<0)
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = 0;
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', 0);
-				}
-				else
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = dosDecim(remamente);
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', dosDecim(remamente));
-					subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(remamente)).toFixed(2);
-				}
-
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ded').value = dosDecim(subtotDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaAcre').value = dosDecim(ivaAcred);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_noded').value = dosDecim(subtotNoDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaNoAcre').value = dosDecim(ivaNoAcred);
-				actualizaKW('posicion', tipoGasto, handle, 'ded', dosDecim(subtotDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaAcre', dosDecim(ivaAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'noDed', dosDecim(subtotNoDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaNoAcre', dosDecim(ivaNoAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'impLoc', 0);
-			}
-			var sumDed = 0.0;
-			var sumNoDed = 0.0;
-			var sumIVA = 0.0;
-			var sumNoIVA = 0.0;
-			var sumKms = 0;
-			var sumLts = 0.0;
-			var sumReman = 0;
-			for(var n = 1; n<= countFact; n++)
-			{
-				var ded = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ded').value;
-				if (ded=='') ded = 0;
-				sumDed = ((parseFloat(sumDed) + parseFloat(ded))).toFixed(2);
-				var NoDed = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_noded').value;
-				if (NoDed=='') NoDed = 0;
-				sumNoDed = ((parseFloat(sumNoDed) + parseFloat(NoDed))).toFixed(2);
-				var iva = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaAcre').value;
-				if (iva=='') iva = 0;
-				sumIVA = ((parseFloat(sumIVA) + parseFloat(iva))).toFixed(2);
-				var noIVA = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaNoAcre').value;
-				if (noIVA=='') noIVA = 0;
-				sumNoIVA = ((parseFloat(sumNoIVA) + parseFloat(noIVA))).toFixed(2);
-				var km = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_kms').value;
-				if (km=='') km = 0;
-				sumKms = sumKms + parseInt(km);
-				var lts = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_litros').value;
-				if (lts=='') lts = 0;
-				sumLts = sumLts + parseInt(lts);
-				var remamente = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_remamente').value;
-				if (remamente=='') remamente = 0;
-				sumReman = ((parseFloat(sumReman) + parseFloat(remamente))).toFixed(2);
-			}
-			document.getElementById('sum_tipo'+tipoGasto+'_kms').value = sumKms;
-			document.getElementById('sum_tipo'+tipoGasto+'_litros').value = dosDecim(sumLts);
-
-			document.getElementById('mto_tipo'+tipoGasto+'_ded').innerHTML = dosDecim(sumDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_noded').innerHTML = dosDecim(sumNoDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_iva').innerHTML = dosDecim(sumIVA);
-			document.getElementById('mto_tipo'+tipoGasto+'_noiva').innerHTML = dosDecim(sumNoIVA);
-
-			var concatDet = sumKms + '-' + sumLts;
-
-			actualizaKW('sumas', tipoGasto, '', 'ded', dosDecim(sumDed));
-			actualizaKW('sumas', tipoGasto, '', 'noDed', dosDecim(sumNoDed));
-			actualizaKW('sumas', tipoGasto, '', 'ivaAcre', dosDecim(sumIVA));
-			actualizaKW('sumas', tipoGasto, '', 'ivaNoAcre', dosDecim(sumNoIVA));
-			actualizaKW('sumas', tipoGasto, '', 'detGast', dosDecim(concatDet));
-
-			sumTotDed = (parseFloat(sumTotDed) + parseFloat(sumDed)).toFixed(2);
-			sumTotNoDed = (parseFloat(sumTotNoDed) + parseFloat(sumNoDed)).toFixed(2);
-			sumTotIVAAcre = (parseFloat(sumTotIVAAcre) + parseFloat(sumIVA)).toFixed(2);
-			sumTotIVAnoAcre = (parseFloat(sumTotIVAnoAcre) + parseFloat(sumNoIVA)).toFixed(2);
-			sumTotComp = (parseFloat(sumTotComp) + parseFloat(sumDed) + parseFloat(sumNoDed) + parseFloat(sumIVA) + parseFloat(sumNoIVA)).toFixed(2);
-		break;
-		case 9:
-			for(var i = 1; i<= countFact; i++)
-			{
-				handle = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_handle').value;
-				tipoFact = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tipoFact').value;
-				totalFact = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_totFact').value);
-				subtot = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_subtotFact').value);
-				iva = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaFact').value);
-				tipoPago = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tPago').value;
-				cantItems = parseInt(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_cantItems').value, 10);
-				desgloce = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_desgloce').value;
-				var desgloces = desgloce.split('-');
-				var otro_subtot = 0;
-				var otro_iva = 0;
-				if(desgloce!='')
-				{
-					subtot = 0;
-					iva = 0;
-					for(r=1;r<=250;r++)
-					{
-						handleItem = document.getElementById('OBKey__572_'+r).value;
-						if(handleItem!='')
-						{
-							if(handleItem==handle)
-							{
-								tGastoItem = document.getElementById('OBKey__620_'+r).value;
-
-								if(tipoGasto==tGastoItem)
-								{
-									subtot = subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									tmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(tmp_iva!='')
-									{
-										iva = iva + parseFloat(tmp_iva);
-									}
-								}
-								else
-								{
-									otro_subtot = otro_subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									otrotmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(otrotmp_iva!='')
-									{
-										otro_iva = otro_iva + parseFloat(otrotmp_iva);
-									}
-								}
-
-							}
-						}
-						else
-						{
-							break;
-						}
-					}
-				}
-				var subtotDed = 0;
-				var subtotNoDed = 0;
-				var ivaAcred = 0;
-				var ivaNoAcred = 0;
-				var unidadPorcentaje = 0;
-				if((tipoFact == 'IMG') || (tipoFact == 'SCOMP'))
-				{
-					subtotDed = 0;
-					subtotNoDed = subtot;
-					ivaAcred = 0;
-					ivaNoAcred = iva;
-				}
-				else
-				{
-					if(tipoPago=='1')
-					{
-						if(totalFact<=topeFisEfectivo)
-						{
-							if(pol_tFiscExt)	
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscExt)
-									{
-										subtotDed = pol_TopeFiscExt;
-										subtotNoDed = subtot - pol_TopeFiscExt;
-										ivaAcred = pol_TopeFiscExt * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscExt;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscExt;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else if(pol_tFiscNac)
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscNac)
-									{
-										subtotDed = pol_TopeFiscNac;
-										subtotNoDed = subtot - pol_TopeFiscNac;
-										ivaAcred = pol_TopeFiscNac * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-									
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscNac;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscNac;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else
-							{
-								subtotDed = subtot;
-								subtotNoDed = 0;
-								ivaAcred = iva;
-								ivaNoAcred = 0;
-							}
-						}
-						else
-						{
-							subtotDed = 0;
-							subtotNoDed = subtot;
-							ivaAcred = 0;
-							ivaNoAcred = iva;
-						}
-					}
-					else
-					{
-						if(pol_tFiscExt)	
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscExt)
-								{
-									subtotDed = pol_TopeFiscExt;
-									subtotNoDed = subtot - pol_TopeFiscExt;
-									ivaAcred = pol_TopeFiscExt * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscExt;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscExt;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else if(pol_tFiscNac)
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscNac)
-								{
-									subtotDed = pol_TopeFiscNac;
-									subtotNoDed = subtot - pol_TopeFiscNac;
-									ivaAcred = pol_TopeFiscNac * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-								
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscNac;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscNac;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else
-						{
-							subtotDed = subtot;
-							subtotNoDed = 0;
-							ivaAcred = iva;
-							ivaNoAcred = 0;
-						}
-					}
-				}
-				
-				//alert('Rubro='+ tipoG +'\n pol_tFiscNac=' + pol_tFiscNac + '\n pol_tFiscExt=' + pol_tFiscExt + '\n pol_unidadFis=' + pol_unidadFis + '\n valorIva=' + valorIva + '\n subtot=' + subtot + '\n iva=' + iva  + '\n pol_TopeFiscNac=' + pol_TopeFiscNac + '\n subtotDed=' + subtotDed + '\n subtotNoDed=' + subtotNoDed + '\n ivaAcred=' + ivaAcred + '\n ivaNoAcred=' + ivaNoAcred);
-
-				remamente = (totalFact - ((otro_subtot + otro_iva) + (subtot + iva))).toFixed(2);
-				if(remamente<0)
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = 0;
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', 0);
-				}
-				else
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = dosDecim(remamente);
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', dosDecim(remamente));
-					subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(remamente)).toFixed(2);
-				}
-
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ded').value = dosDecim(subtotDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaAcre').value = dosDecim(ivaAcred);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_noded').value = dosDecim(subtotNoDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaNoAcre').value = dosDecim(ivaNoAcred);
-				actualizaKW('posicion', tipoGasto, handle, 'ded', dosDecim(subtotDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaAcre', dosDecim(ivaAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'noDed', dosDecim(subtotNoDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaNoAcre', dosDecim(ivaNoAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'impLoc', 0);
-			}
-			var sumDed = 0.0;
-			var sumNoDed = 0.0;
-			var sumIVA = 0.0;
-			var sumNoIVA = 0.0;
-			var sumReman = 0;
-			for(var n = 1; n<= countFact; n++)
-			{
-				var ded = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ded').value;
-				if (ded=='') ded = 0;
-				sumDed = ((parseFloat(sumDed) + parseFloat(ded))).toFixed(2);
-				var NoDed = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_noded').value;
-				if (NoDed=='') NoDed = 0;
-				sumNoDed = ((parseFloat(sumNoDed) + parseFloat(NoDed))).toFixed(2);
-				var iva = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaAcre').value;
-				if (iva=='') iva = 0;
-				sumIVA = ((parseFloat(sumIVA) + parseFloat(iva))).toFixed(2);
-				var noIVA = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaNoAcre').value;
-				if (noIVA=='') noIVA = 0;
-				sumNoIVA = ((parseFloat(sumNoIVA) + parseFloat(noIVA))).toFixed(2);
-				var remamente = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_remamente').value;
-				if (remamente=='') remamente = 0;
-				sumReman = ((parseFloat(sumReman) + parseFloat(remamente))).toFixed(2);
-			}
-			document.getElementById('mto_tipo'+tipoGasto+'_ded').innerHTML = dosDecim(sumDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_noded').innerHTML = dosDecim(sumNoDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_iva').innerHTML = dosDecim(sumIVA);
-			document.getElementById('mto_tipo'+tipoGasto+'_noiva').innerHTML = dosDecim(sumNoIVA);
-
-			actualizaKW('sumas', tipoGasto, '', 'ded', dosDecim(sumDed));
-			actualizaKW('sumas', tipoGasto, '', 'noDed', dosDecim(sumNoDed));
-			actualizaKW('sumas', tipoGasto, '', 'ivaAcre', dosDecim(sumIVA));
-			actualizaKW('sumas', tipoGasto, '', 'ivaNoAcre', dosDecim(sumNoIVA));
-
-			sumTotDed = (parseFloat(sumTotDed) + parseFloat(sumDed)).toFixed(2);
-			sumTotNoDed = (parseFloat(sumTotNoDed) + parseFloat(sumNoDed)).toFixed(2);
-			sumTotIVAAcre = (parseFloat(sumTotIVAAcre) + parseFloat(sumIVA)).toFixed(2);
-			sumTotIVAnoAcre = (parseFloat(sumTotIVAnoAcre) + parseFloat(sumNoIVA)).toFixed(2);
-			sumTotComp = (parseFloat(sumTotComp) + parseFloat(sumDed) + parseFloat(sumNoDed) + parseFloat(sumIVA) + parseFloat(sumNoIVA)).toFixed(2);
-		break;
-		case 10:
-			for(var i = 1; i<= countFact; i++)
-			{
-				handle = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_handle').value;
-				tipoFact = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tipoFact').value;
-				totalFact = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_totFact').value);
-				subtot = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_subtotFact').value);
-				iva = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaFact').value);
-				document.getElementById('versionJS').innerHTML = 'iba = ' + iva;
-				tipoPago = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tPago').value;
-				cantItems = parseInt(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_cantItems').value, 10);
-				desgloce = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_desgloce').value;
-				var desgloces = desgloce.split('-');
-				var otro_subtot = 0;
-				var otro_iva = 0;
-				if(desgloce!='')
-				{
-					subtot = 0;
-					iva = 0;
-					for(r=1;r<=250;r++)
-					{
-						handleItem = document.getElementById('OBKey__572_'+r).value;
-						if(handleItem!='')
-						{
-							if(handleItem==handle)
-							{
-								tGastoItem = document.getElementById('OBKey__620_'+r).value;
-
-								if(tipoGasto==tGastoItem)
-								{
-									subtot = subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									tmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(tmp_iva!='')
-									{
-										iva = iva + parseFloat(tmp_iva);
-									}
-								}
-								else
-								{
-									otro_subtot = otro_subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									otrotmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(otrotmp_iva!='')
-									{
-										otro_iva = otro_iva + parseFloat(otrotmp_iva);
-									}
-								}
-
-							}
-						}
-						else
-						{
-							break;
-						}
-					}
-				}
-				var subtotDed = 0;
-				var subtotNoDed = 0;
-				var ivaAcred = 0;
-				var ivaNoAcred = 0;
-				var unidadPorcentaje = 0;
-				if((tipoFact == 'IMG') || (tipoFact == 'SCOMP'))
-				{
-					subtotDed = 0;
-					subtotNoDed = subtot;
-					ivaAcred = 0;
-					ivaNoAcred = iva;
-				}
-				else
-				{
-					if(tipoPago=='1')
-					{
-						if(totalFact<=topeFisEfectivo)
-						{
-							if(pol_tFiscExt)	
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscExt)
-									{
-										subtotDed = pol_TopeFiscExt;
-										subtotNoDed = subtot - pol_TopeFiscExt;
-										ivaAcred = pol_TopeFiscExt * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-								}
-								if(pol_unidadFis=='%')
-								{
-									if(iva==0)
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-									else
-									{
-										subtotDed = subtot * pol_TopeFiscExt;
-										subtotNoDed = subtot - subtotDed;
-										ivaAcred = iva * pol_TopeFiscExt;
-										ivaNoAcred = iva - ivaAcred;
-									}
-								}
-							}
-							else if(pol_tFiscNac)
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscNac)
-									{
-										if(iva==0)
-										{
-											subtotDed = subtot;
-											subtotNoDed = 0;
-											ivaAcred = iva;
-											ivaNoAcred = 0;
-										}
-										else
-										{
-											subtotDed = pol_TopeFiscNac;
-											subtotNoDed = subtot - pol_TopeFiscNac;
-											ivaAcred = pol_TopeFiscNac * valorIva;
-											ivaNoAcred = iva - ivaAcred;
-										}
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-									
-								}
-								if(pol_unidadFis=='%')
-								{
-									if(iva==0)
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-									else
-									{
-										subtotDed = subtot * pol_TopeFiscExt;
-										subtotNoDed = subtot - subtotDed;
-										ivaAcred = iva * pol_TopeFiscExt;
-										ivaNoAcred = iva - ivaAcred;
-									}
-								}
-							}
-							else
-							{
-								subtotDed = subtot;
-								subtotNoDed = 0;
-								ivaAcred = iva;
-								ivaNoAcred = 0;
-							}
-						}
-						else
-						{
-							subtotDed = 0;
-							subtotNoDed = subtot;
-							ivaAcred = 0;
-							ivaNoAcred = iva;
-						}
-					}
-					else
-					{
-						if(pol_tFiscExt)	
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscExt)
-								{
-									if(iva==0)
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-									else
-									{
-										subtotDed = pol_TopeFiscNac;
-										subtotNoDed = subtot - pol_TopeFiscNac;
-										ivaAcred = pol_TopeFiscNac * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-							}
-							if(pol_unidadFis=='%')
-							{
-								if(iva==0)
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-								else
-								{
-									subtotDed = subtot * pol_TopeFiscExt;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscExt;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-						}
-						else if(pol_tFiscNac)
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscNac)
-								{
-									if(iva==0)
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-									else
-									{
-										subtotDed = pol_TopeFiscNac;
-										subtotNoDed = subtot - pol_TopeFiscNac;
-										ivaAcred = pol_TopeFiscNac * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-								
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscNac;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscNac;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else
-						{
-							subtotDed = subtot;
-							subtotNoDed = 0;
-							ivaAcred = iva;
-							ivaNoAcred = 0;
-						}
-					}
-				}
-				
-				//alert('Rubro='+ tipoG +'\n pol_tFiscNac=' + pol_tFiscNac + '\n pol_tFiscExt=' + pol_tFiscExt + '\n pol_unidadFis=' + pol_unidadFis + '\n valorIva=' + valorIva + '\n subtot=' + subtot + '\n iva=' + iva  + '\n pol_TopeFiscNac=' + pol_TopeFiscNac + '\n subtotDed=' + subtotDed + '\n subtotNoDed=' + subtotNoDed + '\n ivaAcred=' + ivaAcred + '\n ivaNoAcred=' + ivaNoAcred);
-
-				remamente = (totalFact - ((otro_subtot + otro_iva) + (subtot + iva))).toFixed(2);
-				if(remamente<0)
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = 0;
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', 0);
-				}
-				else
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = dosDecim(remamente);
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', dosDecim(remamente));
-					subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(remamente)).toFixed(2);
-				}
-
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ded').value = dosDecim(subtotDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaAcre').value = dosDecim(ivaAcred);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_noded').value = dosDecim(subtotNoDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaNoAcre').value = dosDecim(ivaNoAcred);
-				actualizaKW('posicion', tipoGasto, handle, 'ded', dosDecim(subtotDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaAcre', dosDecim(ivaAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'noDed', dosDecim(subtotNoDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaNoAcre', dosDecim(ivaNoAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'impLoc', 0);
-			}
-			var sumDed = 0.0;
-			var sumNoDed = 0.0;
-			var sumIVA = 0.0;
-			var sumNoIVA = 0.0;
-			var sumDias = 0;
-			var sumReman = 0;
-			for(var n = 1; n<= countFact; n++)
-			{
-				var ded = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ded').value;
-				if (ded=='') ded = 0;
-				sumDed = ((parseFloat(sumDed) + parseFloat(ded))).toFixed(2);
-				var NoDed = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_noded').value;
-				if (NoDed=='') NoDed = 0;
-				sumNoDed = ((parseFloat(sumNoDed) + parseFloat(NoDed))).toFixed(2);
-				var iva = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaAcre').value;
-				if (iva=='') iva = 0;
-				sumIVA = ((parseFloat(sumIVA) + parseFloat(iva))).toFixed(2);
-				var noIVA = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaNoAcre').value;
-				if (noIVA=='') noIVA = 0;
-				sumNoIVA = ((parseFloat(sumNoIVA) + parseFloat(noIVA))).toFixed(2);
-				var dias = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_dias').value;
-				if (dias=='') dias = 0;
-				sumDias = ((parseFloat(sumDias) + parseFloat(dias))).toFixed(2);
-				var remamente = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_remamente').value;
-				if (remamente=='') remamente = 0;
-				sumReman = ((parseFloat(sumReman) + parseFloat(remamente))).toFixed(2);
-			}
-			document.getElementById('sum_tipo'+tipoGasto+'_dias').value = dosDecim(sumDias);
-			
-			document.getElementById('mto_tipo'+tipoGasto+'_ded').innerHTML = dosDecim(sumDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_noded').innerHTML = dosDecim(sumNoDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_iva').innerHTML = dosDecim(sumIVA);
-			document.getElementById('mto_tipo'+tipoGasto+'_noiva').innerHTML = dosDecim(sumNoIVA);
-
-			actualizaKW('sumas', tipoGasto, '', 'ded', dosDecim(sumDed));
-			actualizaKW('sumas', tipoGasto, '', 'noDed', dosDecim(sumNoDed));
-			actualizaKW('sumas', tipoGasto, '', 'ivaAcre', dosDecim(sumIVA));
-			actualizaKW('sumas', tipoGasto, '', 'ivaNoAcre', dosDecim(sumNoIVA));
-			actualizaKW('sumas', tipoGasto, '', 'detGast', dosDecim(sumDias));
-
-			sumTotDed = (parseFloat(sumTotDed) + parseFloat(sumDed)).toFixed(2);
-			sumTotNoDed = (parseFloat(sumTotNoDed) + parseFloat(sumNoDed)).toFixed(2);
-			sumTotIVAAcre = (parseFloat(sumTotIVAAcre) + parseFloat(sumIVA)).toFixed(2);
-			sumTotIVAnoAcre = (parseFloat(sumTotIVAnoAcre) + parseFloat(sumNoIVA)).toFixed(2);
-			sumTotComp = (parseFloat(sumTotComp) + parseFloat(sumDed) + parseFloat(sumNoDed) + parseFloat(sumIVA) + parseFloat(sumNoIVA) + parseFloat(sumReman)).toFixed(2);
-		break;
-		case 11:
-			for(var i = 1; i<= countFact; i++)
-			{
-				handle = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_handle').value;
-				tipoFact = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tipoFact').value;
-				totalFact = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_totFact').value);
-				subtot = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_subtotFact').value);
-				iva = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaFact').value);
-				tipoPago = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tPago').value;
-				cantItems = parseInt(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_cantItems').value, 10);
-				desgloce = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_desgloce').value;
-				var desgloces = desgloce.split('-');
-				var otro_subtot = 0;
-				var otro_iva = 0;
-				if(desgloce!='')
-				{
-					subtot = 0;
-					iva = 0;
-					for(r=1;r<=250;r++)
-					{
-						handleItem = document.getElementById('OBKey__572_'+r).value;
-						if(handleItem!='')
-						{
-							if(handleItem==handle)
-							{
-								tGastoItem = document.getElementById('OBKey__620_'+r).value;
-
-								if(tipoGasto==tGastoItem)
-								{
-									subtot = subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									tmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(tmp_iva!='')
-									{
-										iva = iva + parseFloat(tmp_iva);
-									}
-								}
-								else
-								{
-									otro_subtot = otro_subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									otrotmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(otrotmp_iva!='')
-									{
-										otro_iva = otro_iva + parseFloat(otrotmp_iva);
-									}
-								}
-
-							}
-						}
-						else
-						{
-							break;
-						}
-					}
-				}
-				var subtotDed = 0;
-				var subtotNoDed = 0;
-				var ivaAcred = 0;
-				var ivaNoAcred = 0;
-				var unidadPorcentaje = 0;
-				if((tipoFact == 'IMG') || (tipoFact == 'SCOMP'))
-				{
-					subtotDed = 0;
-					subtotNoDed = subtot;
-					ivaAcred = 0;
-					ivaNoAcred = iva;
-				}
-				else
-				{
-					if(tipoPago=='1')
-					{
-						if(totalFact<=topeFisEfectivo)
-						{
-							if(pol_tFiscExt)	
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscExt)
-									{
-										subtotDed = pol_TopeFiscExt;
-										subtotNoDed = subtot - pol_TopeFiscExt;
-										ivaAcred = pol_TopeFiscExt * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscExt;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscExt;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else if(pol_tFiscNac)
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscNac)
-									{
-										subtotDed = pol_TopeFiscNac;
-										subtotNoDed = subtot - pol_TopeFiscNac;
-										ivaAcred = pol_TopeFiscNac * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-									
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscNac;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscNac;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else
-							{
-								subtotDed = subtot;
-								subtotNoDed = 0;
-								ivaAcred = iva;
-								ivaNoAcred = 0;
-							}
-						}
-						else
-						{
-							subtotDed = 0;
-							subtotNoDed = subtot;
-							ivaAcred = 0;
-							ivaNoAcred = iva;
-						}
-					}
-					else
-					{
-						if(pol_tFiscExt)	
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscExt)
-								{
-									subtotDed = pol_TopeFiscExt;
-									subtotNoDed = subtot - pol_TopeFiscExt;
-									ivaAcred = pol_TopeFiscExt * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscExt;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscExt;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else if(pol_tFiscNac)
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscNac)
-								{
-									subtotDed = pol_TopeFiscNac;
-									subtotNoDed = subtot - pol_TopeFiscNac;
-									ivaAcred = pol_TopeFiscNac * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-								
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscNac;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscNac;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else
-						{
-							subtotDed = subtot;
-							subtotNoDed = 0;
-							ivaAcred = iva;
-							ivaNoAcred = 0;
-						}
-					}
-				}
-				
-				//alert('Rubro='+ tipoG +'\n pol_tFiscNac=' + pol_tFiscNac + '\n pol_tFiscExt=' + pol_tFiscExt + '\n pol_unidadFis=' + pol_unidadFis + '\n valorIva=' + valorIva + '\n subtot=' + subtot + '\n iva=' + iva  + '\n pol_TopeFiscNac=' + pol_TopeFiscNac + '\n subtotDed=' + subtotDed + '\n subtotNoDed=' + subtotNoDed + '\n ivaAcred=' + ivaAcred + '\n ivaNoAcred=' + ivaNoAcred);
-
-				remamente = (totalFact - ((otro_subtot + otro_iva) + (subtot + iva))).toFixed(2);
-				if(remamente<0)
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = 0;
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', 0);
-				}
-				else
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = dosDecim(remamente);
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', dosDecim(remamente));
-					subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(remamente)).toFixed(2);
-				}
-				servicio = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_servicio').value);
-				if(servicio>0)
-				{
-					subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(servicio)).toFixed(2);
-				}
-
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ded').value = dosDecim(subtotDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaAcre').value = dosDecim(ivaAcred);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_noded').value = dosDecim(subtotNoDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaNoAcre').value = dosDecim(ivaNoAcred);
-				actualizaKW('posicion', tipoGasto, handle, 'ded', dosDecim(subtotDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaAcre', dosDecim(ivaAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'noDed', dosDecim(subtotNoDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaNoAcre', dosDecim(ivaNoAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'impLoc', 0);
-			}
-			var sumDed = 0.0;
-			var sumNoDed = 0.0;
-			var sumIVA = 0.0;
-			var sumNoIVA = 0.0;
-			var sumServ = 0.0;
-			var sumPersonas = 0;
-			var sumComidas = 0.0;
-			var sumReman = 0;
-			for(var n = 1; n<= countFact; n++)
-			{
-				var ded = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ded').value;
-				if (ded=='') ded = 0;
-				sumDed = ((parseFloat(sumDed) + parseFloat(ded))).toFixed(2);
-				var NoDed = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_noded').value;
-				if (NoDed=='') NoDed = 0;
-				sumNoDed = ((parseFloat(sumNoDed) + parseFloat(NoDed))).toFixed(2);
-				var iva = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaAcre').value;
-				if (iva=='') iva = 0;
-				sumIVA = ((parseFloat(sumIVA) + parseFloat(iva))).toFixed(2);
-				var noIVA = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaNoAcre').value;
-				if (noIVA=='') noIVA = 0;
-				sumNoIVA = ((parseFloat(sumNoIVA) + parseFloat(noIVA))).toFixed(2);
-				var serv = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_servicio').value;
-				if (serv=='') serv = 0;
-				sumServ = ((parseFloat(sumServ) + parseFloat(serv))).toFixed(2);
-				var personas = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_personas').value;
-				if (personas=='') personas = 0;
-				sumPersonas = sumPersonas + parseInt(personas);
-				var comidas = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_comidas').value;
-				if (comidas=='') comidas = 0;
-				sumComidas = sumComidas + parseInt(comidas);
-				var remamente = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_remamente').value;
-				if (remamente=='') remamente = 0;
-				sumReman = ((parseFloat(sumReman) + parseFloat(remamente))).toFixed(2);
-			}
-			document.getElementById('sum_tipo'+tipoGasto+'_serv').value = dosDecim(sumServ);
-			document.getElementById('sum_tipo'+tipoGasto+'_personas').value = dosDecim(sumPersonas);
-			document.getElementById('sum_tipo'+tipoGasto+'_comidas').value = dosDecim(sumComidas);
-				
-			document.getElementById('mto_tipo'+tipoGasto+'_ded').innerHTML = dosDecim(sumDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_noded').innerHTML = dosDecim(sumNoDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_iva').innerHTML = dosDecim(sumIVA);
-			document.getElementById('mto_tipo'+tipoGasto+'_noiva').innerHTML = dosDecim(sumNoIVA);
-
-			var concatDet = sumPersonas + '-' + sumComidas;
-
-			actualizaKW('sumas', tipoGasto, '', 'ded', dosDecim(sumDed));
-			actualizaKW('sumas', tipoGasto, '', 'noDed', dosDecim(sumNoDed));
-			actualizaKW('sumas', tipoGasto, '', 'ivaAcre', dosDecim(sumIVA));
-			actualizaKW('sumas', tipoGasto, '', 'ivaNoAcre', dosDecim(sumNoIVA));
-			actualizaKW('sumas', tipoGasto, '', 'serv', dosDecim(sumServ));
-			actualizaKW('sumas', tipoGasto, '', 'detGast', dosDecim(concatDet));
-
-			sumTotDed = (parseFloat(sumTotDed) + parseFloat(sumDed)).toFixed(2);
-			sumTotNoDed = (parseFloat(sumTotNoDed) + parseFloat(sumNoDed)).toFixed(2);
-			sumTotIVAAcre = (parseFloat(sumTotIVAAcre) + parseFloat(sumIVA)).toFixed(2);
-			sumTotIVAnoAcre = (parseFloat(sumTotIVAnoAcre) + parseFloat(sumNoIVA)).toFixed(2);
-			sumTotComp = (parseFloat(sumTotComp) + parseFloat(sumDed) + parseFloat(sumNoDed) + parseFloat(sumIVA) + parseFloat(sumNoIVA)).toFixed(2);
-		break;
-		case 12:
-			for(var i = 1; i<= countFact; i++)
-			{
-				handle = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_handle').value;
-				tipoFact = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tipoFact').value;
-				totalFact = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_totFact').value);
-				subtot = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_subtotFact').value);
-				iva = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaFact').value);
-				tipoPago = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tPago').value;
-				cantItems = parseInt(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_cantItems').value, 10);
-				desgloce = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_desgloce').value;
-				var desgloces = desgloce.split('-');
-				var otro_subtot = 0;
-				var otro_iva = 0;
-				if(desgloce!='')
-				{
-					subtot = 0;
-					iva = 0;
-					for(r=1;r<=250;r++)
-					{
-						handleItem = document.getElementById('OBKey__572_'+r).value;
-						if(handleItem!='')
-						{
-							if(handleItem==handle)
-							{
-								tGastoItem = document.getElementById('OBKey__620_'+r).value;
-
-								if(tipoGasto==tGastoItem)
-								{
-									subtot = subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									tmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(tmp_iva!='')
-									{
-										iva = iva + parseFloat(tmp_iva);
-									}
-								}
-								else
-								{
-									otro_subtot = otro_subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									otrotmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(otrotmp_iva!='')
-									{
-										otro_iva = otro_iva + parseFloat(otrotmp_iva);
-									}
-								}
-
-							}
-						}
-						else
-						{
-							break;
-						}
-					}
-				}
-				var subtotDed = 0;
-				var subtotNoDed = 0;
-				var ivaAcred = 0;
-				var ivaNoAcred = 0;
-				var unidadPorcentaje = 0;
-				if((tipoFact == 'IMG') || (tipoFact == 'SCOMP'))
-				{
-					subtotDed = 0;
-					subtotNoDed = subtot;
-					ivaAcred = 0;
-					ivaNoAcred = iva;
-				}
-				else
-				{
-					if(tipoPago=='1')
-					{
-						if(totalFact<=topeFisEfectivo)
-						{
-							if(pol_tFiscExt)	
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscExt)
-									{
-										subtotDed = pol_TopeFiscExt;
-										subtotNoDed = subtot - pol_TopeFiscExt;
-										ivaAcred = pol_TopeFiscExt * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscExt;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscExt;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else if(pol_tFiscNac)
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscNac)
-									{
-										subtotDed = pol_TopeFiscNac;
-										subtotNoDed = subtot - pol_TopeFiscNac;
-										ivaAcred = pol_TopeFiscNac * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-									
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscNac;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscNac;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else
-							{
-								subtotDed = subtot;
-								subtotNoDed = 0;
-								ivaAcred = iva;
-								ivaNoAcred = 0;
-							}
-						}
-						else
-						{
-							subtotDed = 0;
-							subtotNoDed = subtot;
-							ivaAcred = 0;
-							ivaNoAcred = iva;
-						}
-					}
-					else
-					{
-						if(pol_tFiscExt)	
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscExt)
-								{
-									subtotDed = pol_TopeFiscExt;
-									subtotNoDed = subtot - pol_TopeFiscExt;
-									ivaAcred = pol_TopeFiscExt * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscExt;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscExt;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else if(pol_tFiscNac)
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscNac)
-								{
-									subtotDed = pol_TopeFiscNac;
-									subtotNoDed = subtot - pol_TopeFiscNac;
-									ivaAcred = pol_TopeFiscNac * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-								
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscNac;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscNac;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else
-						{
-							subtotDed = subtot;
-							subtotNoDed = 0;
-							ivaAcred = iva;
-							ivaNoAcred = 0;
-						}
-					}
-				}
-				
-				//alert('Rubro='+ tipoG +'\n pol_tFiscNac=' + pol_tFiscNac + '\n pol_tFiscExt=' + pol_tFiscExt + '\n pol_unidadFis=' + pol_unidadFis + '\n valorIva=' + valorIva + '\n subtot=' + subtot + '\n iva=' + iva  + '\n pol_TopeFiscNac=' + pol_TopeFiscNac + '\n subtotDed=' + subtotDed + '\n subtotNoDed=' + subtotNoDed + '\n ivaAcred=' + ivaAcred + '\n ivaNoAcred=' + ivaNoAcred);
-
-				remamente = (totalFact - ((otro_subtot + otro_iva) + (subtot + iva))).toFixed(2);
-				if(remamente<0)
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = 0;
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', 0);
-				}
-				else
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = dosDecim(remamente);
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', dosDecim(remamente));
-					subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(remamente)).toFixed(2);
-				}
-
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ded').value = dosDecim(subtotDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaAcre').value = dosDecim(ivaAcred);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_noded').value = dosDecim(subtotNoDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaNoAcre').value = dosDecim(ivaNoAcred);
-				actualizaKW('posicion', tipoGasto, handle, 'ded', dosDecim(subtotDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaAcre', dosDecim(ivaAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'noDed', dosDecim(subtotNoDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaNoAcre', dosDecim(ivaNoAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'impLoc', 0);
-			}
-			var sumDed = 0.0;
-			var sumNoDed = 0.0;
-			var sumIVA = 0.0;
-			var sumNoIVA = 0.0;
-			var sumReman = 0;
-			for(var n = 1; n<= countFact; n++)
-			{
-				var ded = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ded').value;
-				if (ded=='') ded = 0;
-				sumDed = ((parseFloat(sumDed) + parseFloat(ded))).toFixed(2);
-				var NoDed = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_noded').value;
-				if (NoDed=='') NoDed = 0;
-				sumNoDed = ((parseFloat(sumNoDed) + parseFloat(NoDed))).toFixed(2);
-				var iva = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaAcre').value;
-				if (iva=='') iva = 0;
-				sumIVA = ((parseFloat(sumIVA) + parseFloat(iva))).toFixed(2);
-				var noIVA = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaNoAcre').value;
-				if (noIVA=='') noIVA = 0;
-				sumNoIVA = ((parseFloat(sumNoIVA) + parseFloat(noIVA))).toFixed(2);
-				var remamente = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_remamente').value;
-				if (remamente=='') remamente = 0;
-				sumReman = ((parseFloat(sumReman) + parseFloat(remamente))).toFixed(2);
-			}
-			
-			document.getElementById('mto_tipo'+tipoGasto+'_ded').innerHTML = dosDecim(sumDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_noded').innerHTML = dosDecim(sumNoDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_iva').innerHTML = dosDecim(sumIVA);
-			document.getElementById('mto_tipo'+tipoGasto+'_noiva').innerHTML = dosDecim(sumNoIVA);
-
-			actualizaKW('sumas', tipoGasto, '', 'ded', dosDecim(sumDed));
-			actualizaKW('sumas', tipoGasto, '', 'noDed', dosDecim(sumNoDed));
-			actualizaKW('sumas', tipoGasto, '', 'ivaAcre', dosDecim(sumIVA));
-			actualizaKW('sumas', tipoGasto, '', 'ivaNoAcre', dosDecim(sumNoIVA));
-
-			sumTotDed = (parseFloat(sumTotDed) + parseFloat(sumDed)).toFixed(2);
-			sumTotNoDed = (parseFloat(sumTotNoDed) + parseFloat(sumNoDed)).toFixed(2);
-			sumTotIVAAcre = (parseFloat(sumTotIVAAcre) + parseFloat(sumIVA)).toFixed(2);
-			sumTotIVAnoAcre = (parseFloat(sumTotIVAnoAcre) + parseFloat(sumNoIVA)).toFixed(2);
-			sumTotComp = (parseFloat(sumTotComp) + parseFloat(sumDed) + parseFloat(sumNoDed) + parseFloat(sumIVA) + parseFloat(sumNoIVA)).toFixed(2);
-		break;
-		case 13:
-			for(var i = 1; i<= countFact; i++)
-			{
-				handle = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_handle').value;
-				tipoFact = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tipoFact').value;
-				totalFact = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_totFact').value);
-				subtot = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_subtotFact').value);
-				iva = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaFact').value);
-				tipoPago = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tPago').value;
-				cantItems = parseInt(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_cantItems').value, 10);
-				desgloce = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_desgloce').value;
-				var desgloces = desgloce.split('-');
-				var remamente = 0.0;
-				var otro_subtot = 0.0;
-				var otro_iva = 0.0;
-				if(desgloce!='')
-				{
-					subtot = 0;
-					iva = 0;
-					for(r=1;r<=250;r++)
-					{
-						handleItem = document.getElementById('OBKey__572_'+r).value;
-						if(handleItem!='')
-						{
-							if(handleItem==handle)
-							{
-								tGastoItem = document.getElementById('OBKey__620_'+r).value;
-
-								if(tipoGasto==tGastoItem)
-								{
-									subtot = subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									tmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(tmp_iva!='')
-									{
-										iva = iva + parseFloat(tmp_iva);
-									}
-								}
-								else
-								{
-									otro_subtot = otro_subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									otrotmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(otrotmp_iva!='')
-									{
-										otro_iva = otro_iva + parseFloat(otrotmp_iva);
-									}
-								}
-
-							}
-						}
-						else
-						{
-							break;
-						}
-					}
-				}
-				var subtotDed = 0;
-				var subtotNoDed = 0;
-				var ivaAcred = 0;
-				var ivaNoAcred = 0;
-				var unidadPorcentaje = 0;
-				if((tipoFact == 'IMG') || (tipoFact == 'SCOMP'))
-				{
-					subtotDed = 0;
-					subtotNoDed = subtot;
-					ivaAcred = 0;
-					ivaNoAcred = iva;
-				}
-				else
-				{
-					if(tipoPago=='1')
-					{
-						if(totalFact<=topeFisEfectivo)
-						{
-							if(pol_tFiscExt)	
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscExt)
-									{
-										subtotDed = pol_TopeFiscExt;
-										subtotNoDed = subtot - pol_TopeFiscExt;
-										ivaAcred = pol_TopeFiscExt * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscExt;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscExt;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else if(pol_tFiscNac)
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscNac)
-									{
-										subtotDed = pol_TopeFiscNac;
-										subtotNoDed = subtot - pol_TopeFiscNac;
-										ivaAcred = pol_TopeFiscNac * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-									
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscNac;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscNac;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else
-							{
-								subtotDed = subtot;
-								subtotNoDed = 0;
-								ivaAcred = iva;
-								ivaNoAcred = 0;
-							}
-						}
-						else
-						{
-							subtotDed = 0;
-							subtotNoDed = subtot;
-							ivaAcred = 0;
-							ivaNoAcred = iva;
-						}
-					}
-					else
-					{
-						if(pol_tFiscExt)	
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscExt)
-								{
-									subtotDed = pol_TopeFiscExt;
-									subtotNoDed = subtot - pol_TopeFiscExt;
-									ivaAcred = pol_TopeFiscExt * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscExt;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscExt;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else if(pol_tFiscNac)
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscNac)
-								{
-									subtotDed = pol_TopeFiscNac;
-									subtotNoDed = subtot - pol_TopeFiscNac;
-									ivaAcred = pol_TopeFiscNac * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-								
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscNac;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscNac;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else
-						{
-							subtotDed = subtot;
-							subtotNoDed = 0;
-							ivaAcred = iva;
-							ivaNoAcred = 0;
-						}
-					}
-				}
-				
-				//alert('Rubro='+ tipoG +'\n pol_tFiscNac=' + pol_tFiscNac + '\n pol_tFiscExt=' + pol_tFiscExt + '\n pol_unidadFis=' + pol_unidadFis + '\n valorIva=' + valorIva + '\n subtot=' + subtot + '\n iva=' + iva  + '\n pol_TopeFiscNac=' + pol_TopeFiscNac + '\n subtotDed=' + subtotDed + '\n subtotNoDed=' + subtotNoDed + '\n ivaAcred=' + ivaAcred + '\n ivaNoAcred=' + ivaNoAcred);
-
-				remamente = (totalFact - ((otro_subtot + otro_iva) + (subtot + iva))).toFixed(2);
-				if(remamente<0)
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = 0;
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', 0);
-				}
-				else
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = dosDecim(remamente);
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', dosDecim(remamente));
-					subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(remamente)).toFixed(2);
-				}
-
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ded').value = dosDecim(subtotDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaAcre').value = dosDecim(ivaAcred);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_noded').value = dosDecim(subtotNoDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaNoAcre').value = dosDecim(ivaNoAcred);
-				actualizaKW('posicion', tipoGasto, handle, 'ded', dosDecim(subtotDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaAcre', dosDecim(ivaAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'noDed', dosDecim(subtotNoDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaNoAcre', dosDecim(ivaNoAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'impLoc', 0);
-			}
-			var sumDed = 0.0;
-			var sumNoDed = 0.0;
-			var sumIVA = 0.0;
-			var sumNoIVA = 0.0;
-			var sumKms = 0;
-			var sumLts = 0.0;
-			var sumReman = 0;
-			for(var n = 1; n<= countFact; n++)
-			{
-				var ded = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ded').value;
-				if (ded=='') ded = 0;
-				sumDed = ((parseFloat(sumDed) + parseFloat(ded))).toFixed(2);
-				var NoDed = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_noded').value;
-				if (NoDed=='') NoDed = 0;
-				sumNoDed = ((parseFloat(sumNoDed) + parseFloat(NoDed))).toFixed(2);
-				var iva = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaAcre').value;
-				if (iva=='') iva = 0;
-				sumIVA = ((parseFloat(sumIVA) + parseFloat(iva))).toFixed(2);
-				var noIVA = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaNoAcre').value;
-				if (noIVA=='') noIVA = 0;
-				sumNoIVA = ((parseFloat(sumNoIVA) + parseFloat(noIVA))).toFixed(2);
-				var km = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_kms').value;
-				if (km=='') km = 0;
-				sumKms = sumKms + parseInt(km);
-				var lts = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_litros').value;
-				if (lts=='') lts = 0;
-				sumLts = sumLts + parseInt(lts);
-				var remamente = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_remamente').value;
-				if (remamente=='') remamente = 0;
-				sumReman = ((parseFloat(sumReman) + parseFloat(remamente))).toFixed(2);
-			}
-			document.getElementById('sum_tipo'+tipoGasto+'_kms').value = sumKms;
-			document.getElementById('sum_tipo'+tipoGasto+'_litros').value = dosDecim(sumLts);
-
-			document.getElementById('mto_tipo'+tipoGasto+'_ded').innerHTML = dosDecim(sumDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_noded').innerHTML = dosDecim(sumNoDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_iva').innerHTML = dosDecim(sumIVA);
-			document.getElementById('mto_tipo'+tipoGasto+'_noiva').innerHTML = dosDecim(sumNoIVA);
-
-			var concatDet = sumKms + '-' + sumLts;
-
-			actualizaKW('sumas', tipoGasto, '', 'ded', dosDecim(sumDed));
-			actualizaKW('sumas', tipoGasto, '', 'noDed', dosDecim(sumNoDed));
-			actualizaKW('sumas', tipoGasto, '', 'ivaAcre', dosDecim(sumIVA));
-			actualizaKW('sumas', tipoGasto, '', 'ivaNoAcre', dosDecim(sumNoIVA));
-			actualizaKW('sumas', tipoGasto, '', 'detGast', dosDecim(concatDet));
-
-			sumTotDed = (parseFloat(sumTotDed) + parseFloat(sumDed)).toFixed(2);
-			sumTotNoDed = (parseFloat(sumTotNoDed) + parseFloat(sumNoDed)).toFixed(2);
-			sumTotIVAAcre = (parseFloat(sumTotIVAAcre) + parseFloat(sumIVA)).toFixed(2);
-			sumTotIVAnoAcre = (parseFloat(sumTotIVAnoAcre) + parseFloat(sumNoIVA)).toFixed(2);
-			sumTotComp = (parseFloat(sumTotComp) + parseFloat(sumDed) + parseFloat(sumNoDed) + parseFloat(sumIVA) + parseFloat(sumNoIVA)).toFixed(2);
-		break;
-		case 14:
-			for(var i = 1; i<= countFact; i++)
-			{
-				handle = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_handle').value;
-				tipoFact = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tipoFact').value;
-				totalFact = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_totFact').value);
-				subtot = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_subtotFact').value);
-				iva = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaFact').value);
-				tipoPago = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tPago').value;
-				cantItems = parseInt(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_cantItems').value, 10);
-				desgloce = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_desgloce').value;
-				var desgloces = desgloce.split('-');
-				var otro_subtot = 0;
-				var otro_iva = 0;
-				if(desgloce!='')
-				{
-					subtot = 0;
-					iva = 0;
-					for(r=1;r<=250;r++)
-					{
-						handleItem = document.getElementById('OBKey__572_'+r).value;
-						if(handleItem!='')
-						{
-							if(handleItem==handle)
-							{
-								tGastoItem = document.getElementById('OBKey__620_'+r).value;
-
-								if(tipoGasto==tGastoItem)
-								{
-									subtot = subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									tmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(tmp_iva!='')
-									{
-										iva = iva + parseFloat(tmp_iva);
-									}
-								}
-								else
-								{
-									otro_subtot = otro_subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									otrotmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(otrotmp_iva!='')
-									{
-										otro_iva = otro_iva + parseFloat(otrotmp_iva);
-									}
-								}
-
-							}
-						}
-						else
-						{
-							break;
-						}
-					}
-				}
-				var subtotDed = 0;
-				var subtotNoDed = 0;
-				var ivaAcred = 0;
-				var ivaNoAcred = 0;
-				var unidadPorcentaje = 0;
-				if((tipoFact == 'IMG') || (tipoFact == 'SCOMP'))
-				{
-					subtotDed = 0;
-					subtotNoDed = subtot;
-					ivaAcred = 0;
-					ivaNoAcred = iva;
-				}
-				else
-				{
-					if(tipoPago=='1')
-					{
-						if(totalFact<=topeFisEfectivo)
-						{
-							if(pol_tFiscExt)	
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscExt)
-									{
-										subtotDed = pol_TopeFiscExt;
-										subtotNoDed = subtot - pol_TopeFiscExt;
-										ivaAcred = pol_TopeFiscExt * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscExt;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscExt;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else if(pol_tFiscNac)
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscNac)
-									{
-										subtotDed = pol_TopeFiscNac;
-										subtotNoDed = subtot - pol_TopeFiscNac;
-										ivaAcred = pol_TopeFiscNac * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-									
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscNac;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscNac;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else
-							{
-								subtotDed = subtot;
-								subtotNoDed = 0;
-								ivaAcred = iva;
-								ivaNoAcred = 0;
-							}
-						}
-						else
-						{
-							subtotDed = 0;
-							subtotNoDed = subtot;
-							ivaAcred = 0;
-							ivaNoAcred = iva;
-						}
-					}
-					else
-					{
-						if(pol_tFiscExt)	
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscExt)
-								{
-									subtotDed = pol_TopeFiscExt;
-									subtotNoDed = subtot - pol_TopeFiscExt;
-									ivaAcred = pol_TopeFiscExt * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscExt;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscExt;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else if(pol_tFiscNac)
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscNac)
-								{
-									subtotDed = pol_TopeFiscNac;
-									subtotNoDed = subtot - pol_TopeFiscNac;
-									ivaAcred = pol_TopeFiscNac * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-								
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscNac;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscNac;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else
-						{
-							subtotDed = subtot;
-							subtotNoDed = 0;
-							ivaAcred = iva;
-							ivaNoAcred = 0;
-						}
-					}
-				}
-				
-				//alert('Rubro='+ tipoG +'\n pol_tFiscNac=' + pol_tFiscNac + '\n pol_tFiscExt=' + pol_tFiscExt + '\n pol_unidadFis=' + pol_unidadFis + '\n valorIva=' + valorIva + '\n subtot=' + subtot + '\n iva=' + iva  + '\n pol_TopeFiscNac=' + pol_TopeFiscNac + '\n subtotDed=' + subtotDed + '\n subtotNoDed=' + subtotNoDed + '\n ivaAcred=' + ivaAcred + '\n ivaNoAcred=' + ivaNoAcred);
-
-				remamente = (totalFact - ((otro_subtot + otro_iva) + (subtot + iva))).toFixed(2);
-				if(remamente<0)
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = 0;
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', 0);
-				}
-				else
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = dosDecim(remamente);
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', dosDecim(remamente));
-					subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(remamente)).toFixed(2);
-				}
-				servicio = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_servicio').value);
-				if(servicio>0)
-				{
-					subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(servicio)).toFixed(2);
-				}
-
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ded').value = dosDecim(subtotDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaAcre').value = dosDecim(ivaAcred);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_noded').value = dosDecim(subtotNoDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaNoAcre').value = dosDecim(ivaNoAcred);
-				actualizaKW('posicion', tipoGasto, handle, 'ded', dosDecim(subtotDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaAcre', dosDecim(ivaAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'noDed', dosDecim(subtotNoDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaNoAcre', dosDecim(ivaNoAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'impLoc', 0);
-			}
-			var sumDed = 0.0;
-			var sumNoDed = 0.0;
-			var sumIVA = 0.0;
-			var sumNoIVA = 0.0;
-			var sumReman = 0;
-			for(var n = 1; n<= countFact; n++)
-			{
-				var ded = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ded').value;
-				if (ded=='') ded = 0;
-				sumDed = ((parseFloat(sumDed) + parseFloat(ded))).toFixed(2);
-				var NoDed = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_noded').value;
-				if (NoDed=='') NoDed = 0;
-				sumNoDed = ((parseFloat(sumNoDed) + parseFloat(NoDed))).toFixed(2);
-				var iva = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaAcre').value;
-				if (iva=='') iva = 0;
-				sumIVA = ((parseFloat(sumIVA) + parseFloat(iva))).toFixed(2);
-				var noIVA = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaNoAcre').value;
-				if (noIVA=='') noIVA = 0;
-				sumNoIVA = ((parseFloat(sumNoIVA) + parseFloat(noIVA))).toFixed(2);
-				var remamente = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_remamente').value;
-				if (remamente=='') remamente = 0;
-				sumReman = ((parseFloat(sumReman) + parseFloat(remamente))).toFixed(2);
-			}
-			
-			document.getElementById('mto_tipo'+tipoGasto+'_ded').innerHTML = dosDecim(sumDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_noded').innerHTML = dosDecim(sumNoDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_iva').innerHTML = dosDecim(sumIVA);
-			document.getElementById('mto_tipo'+tipoGasto+'_noiva').innerHTML = dosDecim(sumNoIVA);
-
-			actualizaKW('sumas', tipoGasto, '', 'ded', dosDecim(sumDed));
-			actualizaKW('sumas', tipoGasto, '', 'noDed', dosDecim(sumNoDed));
-			actualizaKW('sumas', tipoGasto, '', 'ivaAcre', dosDecim(sumIVA));
-			actualizaKW('sumas', tipoGasto, '', 'ivaNoAcre', dosDecim(sumNoIVA));
-
-			sumTotDed = (parseFloat(sumTotDed) + parseFloat(sumDed)).toFixed(2);
-			sumTotNoDed = (parseFloat(sumTotNoDed) + parseFloat(sumNoDed)).toFixed(2);
-			sumTotIVAAcre = (parseFloat(sumTotIVAAcre) + parseFloat(sumIVA)).toFixed(2);
-			sumTotIVAnoAcre = (parseFloat(sumTotIVAnoAcre) + parseFloat(sumNoIVA)).toFixed(2);
-			sumTotComp = (parseFloat(sumTotComp) + parseFloat(sumDed) + parseFloat(sumNoDed) + parseFloat(sumIVA) + parseFloat(sumNoIVA)).toFixed(2);
-		break;
-		case 15:
-			for(var i = 1; i<= countFact; i++)
-			{
-				handle = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_handle').value;
-				tipoFact = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tipoFact').value;
-				totalFact = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_totFact').value);
-				subtot = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_subtotFact').value);
-				iva = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaFact').value);
-				tipoPago = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tPago').value;
-				cantItems = parseInt(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_cantItems').value, 10);
-				desgloce = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_desgloce').value;
-				var desgloces = desgloce.split('-');
-				var otro_subtot = 0;
-				var otro_iva = 0;
-				if(desgloce!='')
-				{
-					subtot = 0;
-					iva = 0;
-					for(r=1;r<=250;r++)
-					{
-						handleItem = document.getElementById('OBKey__572_'+r).value;
-						if(handleItem!='')
-						{
-							if(handleItem==handle)
-							{
-								tGastoItem = document.getElementById('OBKey__620_'+r).value;
-
-								if(tipoGasto==tGastoItem)
-								{
-									subtot = subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									tmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(tmp_iva!='')
-									{
-										iva = iva + parseFloat(tmp_iva);
-									}
-								}
-								else
-								{
-									otro_subtot = otro_subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									otrotmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(otrotmp_iva!='')
-									{
-										otro_iva = otro_iva + parseFloat(otrotmp_iva);
-									}
-								}
-
-							}
-						}
-						else
-						{
-							break;
-						}
-					}
-				}
-				var subtotDed = 0;
-				var subtotNoDed = 0;
-				var ivaAcred = 0;
-				var ivaNoAcred = 0;
-				var unidadPorcentaje = 0;
-				if((tipoFact == 'IMG') || (tipoFact == 'SCOMP'))
-				{
-					subtotDed = 0;
-					subtotNoDed = subtot;
-					ivaAcred = 0;
-					ivaNoAcred = iva;
-				}
-				else
-				{
-					if(tipoPago=='1')
-					{
-						if(totalFact<=topeFisEfectivo)
-						{
-							if(pol_tFiscExt)	
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscExt)
-									{
-										subtotDed = pol_TopeFiscExt;
-										subtotNoDed = subtot - pol_TopeFiscExt;
-										ivaAcred = pol_TopeFiscExt * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscExt;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscExt;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else if(pol_tFiscNac)
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscNac)
-									{
-										subtotDed = pol_TopeFiscNac;
-										subtotNoDed = subtot - pol_TopeFiscNac;
-										ivaAcred = pol_TopeFiscNac * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-									
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscNac;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscNac;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else
-							{
-								subtotDed = subtot;
-								subtotNoDed = 0;
-								ivaAcred = iva;
-								ivaNoAcred = 0;
-							}
-						}
-						else
-						{
-							subtotDed = 0;
-							subtotNoDed = subtot;
-							ivaAcred = 0;
-							ivaNoAcred = iva;
-						}
-					}
-					else
-					{
-						if(pol_tFiscExt)	
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscExt)
-								{
-									subtotDed = pol_TopeFiscExt;
-									subtotNoDed = subtot - pol_TopeFiscExt;
-									ivaAcred = pol_TopeFiscExt * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscExt;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscExt;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else if(pol_tFiscNac)
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscNac)
-								{
-									subtotDed = pol_TopeFiscNac;
-									subtotNoDed = subtot - pol_TopeFiscNac;
-									ivaAcred = pol_TopeFiscNac * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-								
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscNac;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscNac;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else
-						{
-							subtotDed = subtot;
-							subtotNoDed = 0;
-							ivaAcred = iva;
-							ivaNoAcred = 0;
-						}
-					}
-				}
-				
-				//alert('Rubro='+ tipoG +'\n pol_tFiscNac=' + pol_tFiscNac + '\n pol_tFiscExt=' + pol_tFiscExt + '\n pol_unidadFis=' + pol_unidadFis + '\n valorIva=' + valorIva + '\n subtot=' + subtot + '\n iva=' + iva  + '\n pol_TopeFiscNac=' + pol_TopeFiscNac + '\n subtotDed=' + subtotDed + '\n subtotNoDed=' + subtotNoDed + '\n ivaAcred=' + ivaAcred + '\n ivaNoAcred=' + ivaNoAcred);
-
-				remamente = (totalFact - ((otro_subtot + otro_iva) + (subtot + iva))).toFixed(2);
-				if(remamente<0)
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = 0;
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', 0);
-				}
-				else
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = dosDecim(remamente);
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', dosDecim(remamente));
-					subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(remamente)).toFixed(2);
-				}
-
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ded').value = dosDecim(subtotDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaAcre').value = dosDecim(ivaAcred);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_noded').value = dosDecim(subtotNoDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaNoAcre').value = dosDecim(ivaNoAcred);
-				actualizaKW('posicion', tipoGasto, handle, 'ded', dosDecim(subtotDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaAcre', dosDecim(ivaAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'noDed', dosDecim(subtotNoDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaNoAcre', dosDecim(ivaNoAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'impLoc', 0);
-			}
-			var sumDed = 0.0;
-			var sumNoDed = 0.0;
-			var sumIVA = 0.0;
-			var sumNoIVA = 0.0;
-			var sumReman = 0;
-			for(var n = 1; n<= countFact; n++)
-			{
-				var ded = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ded').value;
-				if (ded=='') ded = 0;
-				sumDed = sumDed + parseFloat(ded);
-				var NoDed = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_noded').value;
-				if (NoDed=='') NoDed = 0;
-				sumNoDed = sumNoDed + parseFloat(NoDed);
-				var iva = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaAcre').value;
-				if (iva=='') iva = 0;
-				sumIVA = sumIVA + parseFloat(iva);
-				var noIVA = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaNoAcre').value;
-				if (noIVA=='') noIVA = 0;
-				sumNoIVA = sumNoIVA + parseFloat(noIVA);
-				var remamente = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_remamente').value;
-				if (remamente=='') remamente = 0;
-				sumReman = sumReman + parseFloat(remamente);
-			}
-			
-			document.getElementById('mto_tipo'+tipoGasto+'_ded').innerHTML = dosDecim(sumDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_noded').innerHTML = dosDecim(sumNoDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_iva').innerHTML = dosDecim(sumIVA);
-			document.getElementById('mto_tipo'+tipoGasto+'_noiva').innerHTML = dosDecim(sumNoIVA);
-
-			actualizaKW('sumas', tipoGasto, '', 'ded', dosDecim(sumDed));
-			actualizaKW('sumas', tipoGasto, '', 'noDed', dosDecim(sumNoDed));
-			actualizaKW('sumas', tipoGasto, '', 'ivaAcre', dosDecim(sumIVA));
-			actualizaKW('sumas', tipoGasto, '', 'ivaNoAcre', dosDecim(sumNoIVA));
-
-			sumTotDed = (parseFloat(sumTotDed) + parseFloat(sumDed)).toFixed(2);
-			sumTotNoDed = (parseFloat(sumTotNoDed) + parseFloat(sumNoDed)).toFixed(2);
-			sumTotIVAAcre = (parseFloat(sumTotIVAAcre) + parseFloat(sumIVA)).toFixed(2);
-			sumTotIVAnoAcre = (parseFloat(sumTotIVAnoAcre) + parseFloat(sumNoIVA)).toFixed(2);
-			sumTotComp = (parseFloat(sumTotComp) + parseFloat(sumDed) + parseFloat(sumNoDed) + parseFloat(sumIVA) + parseFloat(sumNoIVA)).toFixed(2);
-		break;
-		case 16:
-			for(var i = 1; i<= countFact; i++)
-			{
-				handle = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_handle').value;
-				tipoFact = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tipoFact').value;
-				totalFact = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_totFact').value);
-				subtot = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_subtotFact').value);
-				iva = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaFact').value);
-				tipoPago = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tPago').value;
-				cantItems = parseInt(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_cantItems').value, 10);
-				desgloce = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_desgloce').value;
-				var desgloces = desgloce.split('-');
-				var otro_subtot = 0;
-				var otro_iva = 0;
-				if(desgloce!='')
-				{
-					subtot = 0;
-					iva = 0;
-					for(r=1;r<=250;r++)
-					{
-						handleItem = document.getElementById('OBKey__572_'+r).value;
-						if(handleItem!='')
-						{
-							if(handleItem==handle)
-							{
-								tGastoItem = document.getElementById('OBKey__620_'+r).value;
-
-								if(tipoGasto==tGastoItem)
-								{
-									subtot = subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									tmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(tmp_iva!='')
-									{
-										iva = iva + parseFloat(tmp_iva);
-									}
-								}
-								else
-								{
-									otro_subtot = otro_subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									otrotmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(otrotmp_iva!='')
-									{
-										otro_iva = otro_iva + parseFloat(otrotmp_iva);
-									}
-								}
-
-							}
-						}
-						else
-						{
-							break;
-						}
-					}
-				}
-				var subtotDed = 0;
-				var subtotNoDed = 0;
-				var ivaAcred = 0;
-				var ivaNoAcred = 0;
-				var unidadPorcentaje = 0;
-				if((tipoFact == 'IMG') || (tipoFact == 'SCOMP'))
-				{
-					subtotDed = 0;
-					subtotNoDed = subtot;
-					ivaAcred = 0;
-					ivaNoAcred = iva;
-				}
-				else
-				{
-					if(tipoPago=='1')
-					{
-						if(totalFact<=topeFisEfectivo)
-						{
-							if(pol_tFiscExt)	
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscExt)
-									{
-										subtotDed = pol_TopeFiscExt;
-										subtotNoDed = subtot - pol_TopeFiscExt;
-										ivaAcred = pol_TopeFiscExt * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscExt;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscExt;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else if(pol_tFiscNac)
-							{
-								if(pol_unidadFis=='PESOS')
-								{
-									if(subtot>pol_TopeFiscNac)
-									{
-										subtotDed = pol_TopeFiscNac;
-										subtotNoDed = subtot - pol_TopeFiscNac;
-										ivaAcred = pol_TopeFiscNac * valorIva;
-										ivaNoAcred = iva - ivaAcred;
-									}
-									else
-									{
-										subtotDed = subtot;
-										subtotNoDed = 0;
-										ivaAcred = iva;
-										ivaNoAcred = 0;
-									}
-									
-								}
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscNac;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscNac;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else
-							{
-								subtotDed = subtot;
-								subtotNoDed = 0;
-								ivaAcred = iva;
-								ivaNoAcred = 0;
-							}
-						}
-						else
-						{
-							subtotDed = 0;
-							subtotNoDed = subtot;
-							ivaAcred = 0;
-							ivaNoAcred = iva;
-						}
-					}
-					else
-					{
-						if(pol_tFiscExt)	
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscExt)
-								{
-									subtotDed = pol_TopeFiscExt;
-									subtotNoDed = subtot - pol_TopeFiscExt;
-									ivaAcred = pol_TopeFiscExt * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscExt;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscExt;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else if(pol_tFiscNac)
-						{
-							if(pol_unidadFis=='PESOS')
-							{
-								if(subtot>pol_TopeFiscNac)
-								{
-									subtotDed = pol_TopeFiscNac;
-									subtotNoDed = subtot - pol_TopeFiscNac;
-									ivaAcred = pol_TopeFiscNac * valorIva;
-									ivaNoAcred = iva - ivaAcred;
-								}
-								else
-								{
-									subtotDed = subtot;
-									subtotNoDed = 0;
-									ivaAcred = iva;
-									ivaNoAcred = 0;
-								}
-								
-							}
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscNac;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscNac;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else
-						{
-							subtotDed = subtot;
-							subtotNoDed = 0;
-							ivaAcred = iva;
-							ivaNoAcred = 0;
-						}
-					}
-				}
-				
-				//alert('Rubro='+ tipoG +'\n pol_tFiscNac=' + pol_tFiscNac + '\n pol_tFiscExt=' + pol_tFiscExt + '\n pol_unidadFis=' + pol_unidadFis + '\n valorIva=' + valorIva + '\n subtot=' + subtot + '\n iva=' + iva  + '\n pol_TopeFiscNac=' + pol_TopeFiscNac + '\n subtotDed=' + subtotDed + '\n subtotNoDed=' + subtotNoDed + '\n ivaAcred=' + ivaAcred + '\n ivaNoAcred=' + ivaNoAcred);
-
-				remamente = (totalFact - ((otro_subtot + otro_iva) + (subtot + iva))).toFixed(2);
-				if(remamente<0)
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = 0;
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', 0);
-				}
-				else
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = dosDecim(remamente);
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', dosDecim(remamente));
-					subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(remamente)).toFixed(2);
-				}
-
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ded').value = dosDecim(subtotDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaAcre').value = dosDecim(ivaAcred);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_noded').value = dosDecim(subtotNoDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaNoAcre').value = dosDecim(ivaNoAcred);
-				actualizaKW('posicion', tipoGasto, handle, 'ded', dosDecim(subtotDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaAcre', dosDecim(ivaAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'noDed', dosDecim(subtotNoDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaNoAcre', dosDecim(ivaNoAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'impLoc', 0);
-			}
-			var sumDed = 0.0;
-			var sumNoDed = 0.0;
-			var sumIVA = 0.0;
-			var sumNoIVA = 0.0;
-			var sumViajes = 0;
-			var sumReman = 0;
-			for(var n = 1; n<= countFact; n++)
-			{
-				var ded = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ded').value;
-				if (ded=='') ded = 0;
-				sumDed = ((parseFloat(sumDed) + parseFloat(ded))).toFixed(2);
-				var NoDed = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_noded').value;
-				if (NoDed=='') NoDed = 0;
-				sumNoDed = ((parseFloat(sumNoDed) + parseFloat(NoDed))).toFixed(2);
-				var iva = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaAcre').value;
-				if (iva=='') iva = 0;
-				sumIVA = ((parseFloat(sumIVA) + parseFloat(iva))).toFixed(2);
-				var noIVA = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaNoAcre').value;
-				if (noIVA=='') noIVA = 0;
-				sumNoIVA = ((parseFloat(sumNoIVA) + parseFloat(noIVA))).toFixed(2);
-				var viajes = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_viajes').value;
-				if (viajes=='') viajes = 0;
-				sumViajes = ((parseFloat(sumViajes) + parseFloat(viajes))).toFixed(2);
-				var remamente = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_remamente').value;
-				if (remamente=='') remamente = 0;
-				sumReman = ((parseFloat(sumReman) + parseFloat(remamente))).toFixed(2);
-			}
-			
-			document.getElementById('sum_tipo'+tipoGasto+'_viajes').value = dosDecim(sumViajes);
-			
-			document.getElementById('mto_tipo'+tipoGasto+'_ded').innerHTML = dosDecim(sumDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_noded').innerHTML = dosDecim(sumNoDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_iva').innerHTML = dosDecim(sumIVA);
-			document.getElementById('mto_tipo'+tipoGasto+'_noiva').innerHTML = dosDecim(sumNoIVA);
-
-			actualizaKW('sumas', tipoGasto, '', 'ded', dosDecim(sumDed));
-			actualizaKW('sumas', tipoGasto, '', 'noDed', dosDecim(sumNoDed));
-			actualizaKW('sumas', tipoGasto, '', 'ivaAcre', dosDecim(sumIVA));
-			actualizaKW('sumas', tipoGasto, '', 'ivaNoAcre', dosDecim(sumNoIVA));
-
-			sumTotDed = (parseFloat(sumTotDed) + parseFloat(sumDed)).toFixed(2);
-			sumTotNoDed = (parseFloat(sumTotNoDed) + parseFloat(sumNoDed)).toFixed(2);
-			sumTotIVAAcre = (parseFloat(sumTotIVAAcre) + parseFloat(sumIVA)).toFixed(2);
-			sumTotIVAnoAcre = (parseFloat(sumTotIVAnoAcre) + parseFloat(sumNoIVA)).toFixed(2);
-			sumTotComp = (parseFloat(sumTotComp) + parseFloat(sumDed) + parseFloat(sumNoDed) + parseFloat(sumIVA) + parseFloat(sumNoIVA)).toFixed(2);
-		break;
-		case 17:
-			for(var i = 1; i<= countFact; i++)
-			{
-				handle = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_handle').value;
-				tipoFact = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tipoFact').value;
-				totalFact = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_totFact').value);
-				subtot = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_subtotFact').value);
-				iva = parseFloat(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaFact').value);
-				tipoPago = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_tPago').value;
-				cantItems = parseInt(document.getElementById('tipo'+tipoGasto+'_fact'+i+'_cantItems').value, 10);
-				desgloce = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_desgloce').value;
-				dedudici = document.getElementById('tipo'+tipoGasto+'_fact'+i+'_deduci').value;
-				
-				porcentaje = parseFloat(dedudici) / 100;
-
-				pol_TopeFiscExt = porcentaje;
-				pol_TopeFiscNac = porcentaje;
-
-				var desgloces = desgloce.split('-');
-				var otro_subtot = 0;
-				var otro_iva = 0;
-				if(desgloce!='')
-				{
-					subtot = 0;
-					iva = 0;
-					for(r=1;r<=250;r++)
-					{
-						handleItem = document.getElementById('OBKey__572_'+r).value;
-						if(handleItem!='')
-						{
-							if(handleItem==handle)
-							{
-								tGastoItem = document.getElementById('OBKey__620_'+r).value;
-
-								if(tipoGasto==tGastoItem)
-								{
-									subtot = subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									tmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(tmp_iva!='')
-									{
-										iva = iva + parseFloat(tmp_iva);
-									}
-								}
-								else
-								{
-									otro_subtot = otro_subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-									otrotmp_iva = document.getElementById('OBKey__504_'+r).value;
-									if(otrotmp_iva!='')
-									{
-										otro_iva = otro_iva + parseFloat(otrotmp_iva);
-									}
-								}
-
-							}
-						}
-						else
-						{
-							break;
-						}
-					}
-				}
-				var subtotDed = 0;
-				var subtotNoDed = 0;
-				var ivaAcred = 0;
-				var ivaNoAcred = 0;
-				var unidadPorcentaje = 0;
-				if((tipoFact == 'IMG') || (tipoFact == 'SCOMP'))
-				{
-					subtotDed = 0;
-					subtotNoDed = subtot;
-					ivaAcred = 0;
-					ivaNoAcred = iva;
-				}
-				else
-				{
-					if(tipoPago=='1')
-					{
-						if(totalFact<=topeFisEfectivo)
-						{
-							if(pol_tFiscExt)	
-							{
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscExt;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscExt;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else if(pol_tFiscNac)
-							{
-								if(pol_unidadFis=='%')
-								{
-									subtotDed = subtot * pol_TopeFiscNac;
-									subtotNoDed = subtot - subtotDed;
-									ivaAcred = iva * pol_TopeFiscNac;
-									ivaNoAcred = iva - ivaAcred;
-								}
-							}
-							else
-							{
-								subtotDed = subtot;
-								subtotNoDed = 0;
-								ivaAcred = iva;
-								ivaNoAcred = 0;
-							}
-						}
-						else
-						{
-							subtotDed = 0;
-							subtotNoDed = subtot;
-							ivaAcred = 0;
-							ivaNoAcred = iva;
-						}
-					}
-					else
-					{
-						if(pol_tFiscExt)	
-						{
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscExt;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscExt;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else if(pol_tFiscNac)
-						{
-							if(pol_unidadFis=='%')
-							{
-								subtotDed = subtot * pol_TopeFiscNac;
-								subtotNoDed = subtot - subtotDed;
-								ivaAcred = iva * pol_TopeFiscNac;
-								ivaNoAcred = iva - ivaAcred;
-							}
-						}
-						else
-						{
-							subtotDed = subtot;
-							subtotNoDed = 0;
-							ivaAcred = iva;
-							ivaNoAcred = 0;
-						}
-					}
-				}
-				
-				//alert('Rubro='+ tipoG +'\n pol_tFiscNac=' + pol_tFiscNac + '\n pol_tFiscExt=' + pol_tFiscExt + '\n pol_unidadFis=' + pol_unidadFis + '\n valorIva=' + valorIva + '\n subtot=' + subtot + '\n iva=' + iva  + '\n pol_TopeFiscNac=' + pol_TopeFiscNac + '\n subtotDed=' + subtotDed + '\n subtotNoDed=' + subtotNoDed + '\n ivaAcred=' + ivaAcred + '\n ivaNoAcred=' + ivaNoAcred);
-
-				remamente = (totalFact - ((otro_subtot + otro_iva) + (subtot + iva))).toFixed(2);
-				if(remamente<0)
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = 0;
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', 0);
-				}
-				else
-				{
-					document.getElementById('tipo'+tipoGasto+'_fact'+i+'_remamente').value = dosDecim(remamente);
-					actualizaKW('posicion', tipoGasto, handle, 'remamente', dosDecim(remamente));
-					subtotNoDed = (parseFloat(subtotNoDed) + parseFloat(remamente)).toFixed(2);
-				}
-
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ded').value = dosDecim(subtotDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaAcre').value = dosDecim(ivaAcred);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_noded').value = dosDecim(subtotNoDed);
-				document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaNoAcre').value = dosDecim(ivaNoAcred);
-				actualizaKW('posicion', tipoGasto, handle, 'ded', dosDecim(subtotDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaAcre', dosDecim(ivaAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'noDed', dosDecim(subtotNoDed));
-				actualizaKW('posicion', tipoGasto, handle, 'ivaNoAcre', dosDecim(ivaNoAcred));
-				actualizaKW('posicion', tipoGasto, handle, 'impLoc', 0);
-			}
-			var sumDed = 0.0;
-			var sumNoDed = 0.0;
-			var sumIVA = 0.0;
-			var sumNoIVA = 0.0;
-			var sumReman = 0;
-			for(var n = 1; n<= countFact; n++)
-			{
-				var ded = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ded').value;
-				if (ded=='') ded = 0;
-				sumDed = ((parseFloat(sumDed) + parseFloat(ded))).toFixed(2);
-				var NoDed = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_noded').value;
-				if (NoDed=='') NoDed = 0;
-				sumNoDed = ((parseFloat(sumNoDed) + parseFloat(NoDed))).toFixed(2);
-				var iva = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaAcre').value;
-				if (iva=='') iva = 0;
-				sumIVA = ((parseFloat(sumIVA) + parseFloat(iva))).toFixed(2);
-				var noIVA = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_ivaNoAcre').value;
-				if (noIVA=='') noIVA = 0;
-				sumNoIVA = ((parseFloat(sumNoIVA) + parseFloat(noIVA))).toFixed(2);
-				var remamente = document.getElementById('tipo'+tipoGasto+'_fact'+n+'_remamente').value;
-				if (remamente=='') remamente = 0;
-				sumReman = ((parseFloat(sumReman) + parseFloat(remamente))).toFixed(2);
-			}
-			document.getElementById('mto_tipo'+tipoGasto+'_ded').innerHTML = dosDecim(sumDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_noded').innerHTML = dosDecim(sumNoDed);
-			document.getElementById('mto_tipo'+tipoGasto+'_iva').innerHTML = dosDecim(sumIVA);
-			document.getElementById('mto_tipo'+tipoGasto+'_noiva').innerHTML = dosDecim(sumNoIVA);
-
-			actualizaKW('sumas', tipoGasto, '', 'ded', dosDecim(sumDed));
-			actualizaKW('sumas', tipoGasto, '', 'noDed', dosDecim(sumNoDed));
-			actualizaKW('sumas', tipoGasto, '', 'ivaAcre', dosDecim(sumIVA));
-			actualizaKW('sumas', tipoGasto, '', 'ivaNoAcre', dosDecim(sumNoIVA));
-			
-			sumTotDed = (parseFloat(sumTotDed) + parseFloat(sumDed)).toFixed(2);
-			sumTotNoDed = (parseFloat(sumTotNoDed) + parseFloat(sumNoDed)).toFixed(2);
-			sumTotIVAAcre = (parseFloat(sumTotIVAAcre) + parseFloat(sumIVA)).toFixed(2);
-			sumTotIVAnoAcre = (parseFloat(sumTotIVAnoAcre) + parseFloat(sumNoIVA)).toFixed(2);
-			sumTotComp = (parseFloat(sumTotComp) + parseFloat(sumDed) + parseFloat(sumNoDed) + parseFloat(sumIVA) + parseFloat(sumNoIVA)).toFixed(2);
-		break;
-
-	}
-	*/
 }
 /*=======================
 Funcion Envia el valor a modificar en un campo KW para OnBase
@@ -6901,51 +2861,5 @@ function validacionForm()
 		actualizaKW('sumas', '0', '', 'ivaNoAcre', dosDecim(sumTotIVAnoAcre));
 		document.getElementById('totalComprobacion').value = dosDecim(sumTotComp);
 		document.getElementById('mto_totNet').innerHTML = dosDecim(sumTotComp);
-	}
-}
-
-function separacionIvas(handle)
-{
-	var subTot16 = 0.0;
-	var subTot8 = 0.0;
-	var	subTot0 = 0.0;
-	var mtoIva16 = 0.0;
-	var mtoIva8 = 0.0;
-	var mtoIva0 = 0.0;
-
-	for(r=1;r<=250;r++) //Recorrera cada concepto del CFDI... En este caso particular si va directo a los inputs del HTML que corresponden a los valores de KW del KWTG FE - Conceptos
-	{
-		handleItem = document.getElementById('OBKey__572_'+r).value;
-		if(handleItem!='')//Asegura que el Handle del Registro del KWTG FE - Conceptos no este vacio
-		{
-			if(handleItem==handle) //Valida que el Handle del Concepto corresponda al mismo handle del Comprobante principal
-			{
-				var tasa = document.getElementById('OBKey__505_'+r).value;
-				var cImporte = parseFloat(document.getElementById('OBKey__105_'+r)).value;
-				var tImporte = parseFloat(document.getElementById('OBKey__504_'+r)).value;
-
-				switch (tasa)
-				{
-					case '0.16':
-						subTot16 += cImporte;
-						mtoIva16 += tImporte;
-					break;
-
-					case '0.08':
-						subTot8 += cImporte;
-						mtoIva8 += tImporte;
-					break;
-
-					case '0':
-						subTot0 += cImporte;
-						mtoIva0 += tImporte;
-					break;
-				}
-			}
-		}
-		else //Si el Handle esta vacio, deja de continuar recorriendo los Records del KWTG FE - Conceptos 
-		{
-			break;
-		}
 	}
 }
