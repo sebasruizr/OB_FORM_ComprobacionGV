@@ -58,7 +58,7 @@ Se muestran en la marca de agua al pie del Formulario
 10/05/2019 18:41 = Sebastian Ruiz - Ajuste JS para discriminar los impuestos trasladados de la factura siempre igual a 002 correspondiente a IVA y omitir otros impuestos como IEPS
 14/05/2019 16:08 = Sebastian Ruiz - Ajuste JS para controlar en Tipo Gastos 10 (Renta de Auto) si la factura tiene IVA en 0, no realice el calculo de IVA Acreditable por monto o porcentaje
 */
-var versionJS = '04/09/2020 02:58 '; //Ultima modificación de este archivo JS 
+var versionJS = '04/09/2020 23:30 '; //Ultima modificación de este archivo JS 
 var versionFormOB = 'V 1.0 09052018'; //Ultima versión del SYS HTML FORM asignado a DT en OnBase
 
 //Los siguientes arrays son cargados en memoria en cada carga del formulario para control de las funciones de mas adelante
@@ -622,52 +622,20 @@ function creaFactCFDI(tipoGasto, i, tipoFact, detalleGasto, SerieFolio, rfc, pro
 						</div> \
 						<div class="col-sm-4"> \
 							<div class="input-group input-group-sm"> \
-								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">Deducible 16%</span> \
+								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">Deducible</span> \
 								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_ded" class="form-control" readonly value="'+ded+'" /> \
 							</div> \
 							<div class="input-group input-group-sm"> \
-								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">No Deducible 16%</span> \
+								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">No Deducible</span> \
 								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_noded" class="form-control" readonly value="'+noDed+'" /> \
 							</div> \
 							<div class="input-group input-group-sm"> \
-								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">IVA Acreditable 16%</span> \
+								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">IVA Acreditable</span> \
 								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_ivaAcre" class="form-control" readonly value="'+iva+'" /> \
 							</div> \
 							<div class="input-group input-group-sm"> \
-								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">IVA No Acreditable 16%</span> \
+								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">IVA No Acreditable</span> \
 								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_ivaNoAcre" class="form-control" readonly value="'+noIva+'" /> \
-							</div> \
-							<div class="input-group input-group-sm"> \
-								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">Deducible 8%</span> \
-								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_ded8" class="form-control" readonly value="'+ded+'" /> \
-							</div> \
-							<div class="input-group input-group-sm"> \
-								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">No Deducible 8%</span> \
-								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_noded8" class="form-control" readonly value="'+noDed+'" /> \
-							</div> \
-							<div class="input-group input-group-sm"> \
-								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">IVA Acreditable 8%</span> \
-								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_ivaAcre8" class="form-control" readonly value="'+iva+'" /> \
-							</div> \
-							<div class="input-group input-group-sm"> \
-								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">IVA No Acreditable 8%</span> \
-								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_ivaNoAcre8" class="form-control" readonly value="'+noIva+'" /> \
-							</div> \
-							<div class="input-group input-group-sm"> \
-								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">Deducible 0%</span> \
-								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_ded0" class="form-control" readonly value="'+ded+'" /> \
-							</div> \
-							<div class="input-group input-group-sm"> \
-								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">No Deducible 0%</span> \
-								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_noded0" class="form-control" readonly value="'+noDed+'" /> \
-							</div> \
-							<div class="input-group input-group-sm"> \
-								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">IVA Acreditable 0%</span> \
-								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_ivaAcre0" class="form-control" readonly value="'+iva+'" /> \
-							</div> \
-							<div class="input-group input-group-sm"> \
-								<span class="input-group-addon" id="sizing-addon3" style="background-color: #FFF; font-weight: bold;">IVA No Acreditable 0%</span> \
-								<input type="text" id="tipo'+tipoGasto+'_fact'+countFact+'_ivaNoAcre0" class="form-control" readonly value="'+noIva+'" /> \
 							</div> \
 						</div> ';
 		}
@@ -2103,55 +2071,6 @@ function sumaMontos(tipoGasto)
 				break;
 		}
 
-		/*
-		
-		
-		ELIMINAR TODO EL SIGUIENTE  IF
-		
-		
-		
-		*/
-		if(desgloce!='') //Evalua si existe separación de conceptos del CFDI
-		{
-			subtot = 0;
-			iva = 0;
-			for(r=1;r<=250;r++) //Recorrera cada concepto del CFDI... En este caso particular si va directo a los inputs del HTML que corresponden a los valores de KW del KWTG FE - Conceptos
-			{
-				handleItem = document.getElementById('OBKey__572_'+r).value;
-				if(handleItem!='')//Asegura que el Handle del Registro del KWTG FE - Conceptos no este vacio
-				{
-					if(handleItem==handle) //Valida que el Handle del Concepto corresponda al mismo handle del Comprobante principal
-					{
-						tGastoItem = document.getElementById('OBKey__620_'+r).value;
-
-						if(tipoGasto==tGastoItem) //Valida si el Tipo de Gasto del Concepto encontrado con el mismo Handle es igual al Tipo de Gasto del CFDI principal
-						{
-							subtot = subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-							tmp_iva = document.getElementById('OBKey__504_'+r).value;
-							if(tmp_iva!='') //Valida que el concepto encontrado contenga IVA
-							{
-								iva = iva + parseFloat(tmp_iva); //Suma el monto del IVA en Acumulador principal de IVA
-							}
-						}
-						else //Caso contrario en que el Concepto no corresponda al mismo Tipo de Gasto que el CFDI
-						{
-							otro_subtot = otro_subtot + parseFloat(document.getElementById('OBKey__195_'+r).value);
-							otrotmp_iva = document.getElementById('OBKey__504_'+r).value;
-							if(otrotmp_iva!='') //Valida que el concepto encontrado contenga IVA
-							{
-								otro_iva = otro_iva + parseFloat(otrotmp_iva); //Suma el monto del IVA en Acumulador alterno de IVA
-							}
-						}
-
-					}
-				}
-				else //Si el Handle esta vacio, deja de continuar recorriendo los Records del KWTG FE - Conceptos 
-				{
-					break;
-				}
-			}
-		}
-
 		var subtotDed = 0.0;
 		var subtotNoDed = 0.0;
 		var ivaAcred = 0.0;
@@ -2183,7 +2102,7 @@ function sumaMontos(tipoGasto)
 		var mtoIva8 = 0.0;
 		var mtoIva0 = 0.0;
 
-		var tope;
+		var tope = 0.0;
 
 		
 		if((tipoFact == 'IMG') || (tipoFact == 'SCOMP')) //Si el tipo de COmprobante es igual a IMG o SCOMP automaticamente se determina todo el comprobante como no deducible e IVA no acreditable
@@ -2205,9 +2124,9 @@ function sumaMontos(tipoGasto)
 					if(handleItem==handle) //Valida que el Handle del Concepto corresponda al mismo handle del Comprobante principal
 					{
 						var tGastoItem = document.getElementById('OBKey__620_'+r).value;
-						var tasa = document.getElementById('OBKey__505_'+r).value;
-						var impConcepto = parseFloat(document.getElementById('OBKey__105_'+r)).value;
-						var impIva = parseFloat(document.getElementById('OBKey__504_'+r)).value;
+						var tasa = parseFloat(document.getElementById('OBKey__505_'+r).value);
+						var impConcepto = parseFloat(document.getElementById('OBKey__195_'+r).value);
+						var impIva = parseFloat(document.getElementById('OBKey__504_'+r).value);
 
 						if(tipoGasto==tGastoItem) //Valida si el Tipo de Gasto del Concepto encontrado con el mismo Handle es igual al Tipo de Gasto del CFDI principal
 						{
@@ -2221,17 +2140,17 @@ function sumaMontos(tipoGasto)
 							*/
 							switch (tasa)
 							{
-								case '0.16':
+								case 0.16:
 									subTot16 += impConcepto;
 									mtoIva16 += impIva;
 								break;
 
-								case '0.08':
+								case 0.08:
 									subTot8 += impConcepto;
 									mtoIva8 += impIva;
 								break;
 
-								case '0':
+								case 0:
 									subTot0 += impConcepto;
 									mtoIva0 += impIva;
 								break;
@@ -2254,12 +2173,15 @@ function sumaMontos(tipoGasto)
 				}
 			}
 
+			console.log('Montos de Conceptos para Factura ' + i + ' Handle ' + handle);
 			console.log('handle ' + handle + ' tipoG ' + tipoG + ' subTot16 ' + subTot16);
 			console.log('handle ' + handle + ' tipoG ' + tipoG + ' subTot8 ' + subTot8);
 			console.log('handle ' + handle + ' tipoG ' + tipoG + ' subTot0 ' + subTot0);
 			console.log('handle ' + handle + ' tipoG ' + tipoG + ' mtoIva16 ' + mtoIva16);
 			console.log('handle ' + handle + ' tipoG ' + tipoG + ' mtoIva8 ' + mtoIva8);
 			console.log('handle ' + handle + ' tipoG ' + tipoG + ' mtoIva0 ' + mtoIva0);
+
+			calcular = true;
 
 			if(tipoG==8)
 			{
@@ -2271,10 +2193,12 @@ function sumaMontos(tipoGasto)
 					ivaAcred = 0;
 					ivaNoAcred = iva;
 					ivaNoAcred16 = iva;
+					calcular = false;
 				}
 				else
 				{
 					tope = kms * pol_TopeFiscNac;
+					console.log('Tipo 8 con tope ' + tope + ' kms ' + kms);
 				}
 			}
 			else if(tipoG==17)
@@ -2283,48 +2207,7 @@ function sumaMontos(tipoGasto)
 			}
 			else
 			{
-				if(tipoPago=='1') //Si el tipo de pago principal (EL DE MAYOR MONTO INGRESADO POR EL USUARIO EN EL PORTAL) es igual a 1 (Efectivo)
-				{
-					if(totalFact<=topeFisEfectivo) //Valida si el monto total del comprobante es menor al tipeFiscal obtenido del AFKS Pol - Campos diversos
-					{
-						if(pol_tFiscExt) //Evalua si para el tipo de gasto aplica validación de Tope Fiscal Extranjero (solo cuando la comprobación sea extranjera)	
-						{
-							if(pol_unidadFis=='PESOS') //Evalua si la unidad de control del Tope Fiscal es en PESOS
-							{
-								tope = pol_TopeFiscExt; //Determina el monto del Tope Fiscal como cantidad deducible del gasto
-							}
-							if(pol_unidadFis=='%') //Evalua si la unidad de control del Tope Fiscal es en porcentaje
-							{
-								tope = subtot * pol_TopeFiscExt; //Multiplica el subtotal del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como deducible
-							}
-						}
-						else if(pol_tFiscNac) //Evalua si para el tipo de gasto aplica validación de Tope Fiscal nacional
-						{
-							if(pol_unidadFis=='PESOS') //Evalua si la unidad de control del Tope Fiscal es en PESOS
-							{
-								tope = pol_TopeFiscNac; //Determina el monto del Tope Fiscal como cantidad deducible del gasto
-							}
-							if(pol_unidadFis=='%') //Evalua si la unidad de control del Tope Fiscal es en porcentaje
-							{
-								tope = subtot * pol_TopeFiscNac; //Multiplica el subtotal del Comprobante por el Tope Fiscal (Cuando sea % debera estar en el AFKS Pol - Topes en decimal, ejemplo 0.2 para 20% o 0.085 para 8.5%). La cantidad obtenida se determina como deducible
-							}
-						}
-						else //En caso de no existir Tope Fiscal ni Nacional ni Extranjero para el tipo de gasto
-						{
-							tope = subtot;
-						}
-					}
-					else //En caso que el monto total del comprobante ses mayor al Tope Fiscal de pago en Efectivo
-					{
-						subtotDed = 0;
-						subtotNoDed = subtot;
-						subtotNoDed16 = subtot;
-						ivaAcred = 0;
-						ivaNoAcred = iva;
-						ivaNoAcred16 = iva;
-					}
-				}
-				else //En caso que el Tipo de pago principal (EL DE MAYOR MONTO INGRESADO POR EL USUARIO EN EL PORTAL) sea distinto a Efectivo
+				if(((tipoPago=='1') && (totalFact<=topeFisEfectivo)) || (tipoPago!='1') )//Si el tipo de pago principal (EL DE MAYOR MONTO INGRESADO POR EL USUARIO EN EL PORTAL) es igual a 1 (Efectivo)
 				{
 					if(pol_tFiscExt) //Evalua si para el tipo de gasto aplica validación de Tope Fiscal Extranjero (solo cuando la comprobación sea extranjera)	
 					{
@@ -2350,109 +2233,122 @@ function sumaMontos(tipoGasto)
 					}
 					else //En caso de no existir Tope Fiscal ni Nacional ni Extranjero para el tipo de gasto
 					{
-						tope = subtot; //Se establece la totalidad del subtotal del comprobante como Deducible
+						tope = subtot;
 					}
+
+				}
+				else //En caso que el Tipo de pago principal (EL DE MAYOR MONTO INGRESADO POR EL USUARIO EN EL PORTAL) sea distinto a Efectivo
+				{
+					subtotDed = 0;
+					subtotNoDed = subtot;
+					subtotNoDed16 = subtot;
+					ivaAcred = 0;
+					ivaNoAcred = iva;
+					ivaNoAcred16 = iva;
+					calcular = false;
 				}
 			}
-
-			var yadeducible = 0.0;
-
-			if(subTot16 == tope)
+			if(calcular)
 			{
-				subtotDed16 = subTot16;
-				yadeducible = tope;
-				subtotNoDed16 = 0;
-			}
-			if(subTot16 < tope)
-			{
-				subtotDed16 = subTot16;
-				yadeducible = subtotDed16;
-				subtotNoDed16 = 0;
-			}
-			if(subTot16 > tope)
-			{
-				subtotDed16 = tope;
-				yadeducible = subtotDed16;
-				subtotNoDed16 = subTot16 - subtotDed16;
-			}
+				var yadeducible = 0.0;
 
-			if((subTot8 + yadeducible) == tope)
-			{
-				subtotDed8 = subTot8;
-				yadeducible += subtotDed8;
-				subtotNoDed8 = 0;
+				if(subTot16 == tope)
+				{
+					subtotDed16 = subTot16;
+					yadeducible = tope;
+					subtotNoDed16 = 0;
+				}
+				if(subTot16 < tope)
+				{
+					subtotDed16 = subTot16;
+					yadeducible = subtotDed16;
+					subtotNoDed16 = 0;
+				}
+				if(subTot16 > tope)
+				{
+					subtotDed16 = tope;
+					yadeducible = subtotDed16;
+					subtotNoDed16 = subTot16 - subtotDed16;
+				}
+	
+				if((subTot8 + yadeducible) == tope)
+				{
+					subtotDed8 = subTot8;
+					yadeducible += subtotDed8;
+					subtotNoDed8 = 0;
+				}
+				if((subTot8 + yadeducible) < tope)
+				{
+					subtotDed8 = subTot8;
+					yadeducible += subtotDed8;
+					subtotNoDed8 = 0;
+				}
+				if((subTot8 + yadeducible) > tope)
+				{
+					subtotDed8 =  tope - yadeducible;
+					yadeducible = tope;
+					subtotNoDed8 = subTot8 - subtotDed8;
+				}
+	
+				if((subTot0 + yadeducible) == tope)
+				{
+					subtotDed0 = subTot0;
+					yadeducible += subtotDed0;
+					subtotNoDed0 = 0;
+				}
+				if((subTot0 + yadeducible) < tope)
+				{
+					subtotDed0 = subTot0;
+					yadeducible += subtotDed0;
+					subtotNoDed0 = 0;
+				}
+				if((subTot0 + yadeducible) > tope)
+				{
+					subtotDed0 =  tope - yadeducible;
+					yadeducible = tope;
+					subtotNoDed0 = subTot0 - subtotDed0;
+				}
+	
+				ivaAcred16 = subtotDed16 * 0.16;
+				ivaNoAcred16 = subtotNoDed16 * 0.16;
+				ivaAcred8 = subtotDed8 * 0.08;
+				ivaNoAcred8 = subtotNoDed8 * 0.08;
+				ivaAcred0 = subtotDed0 * 0.0;
+				ivaNoAcred0 = subtotNoDed0 * 0.0;
+	
+				subtotDed = subtotDed16 + subtotDed8 + subtotDed0;
+				subtotNoDed = subtotNoDed16 + subtotNoDed8 + subtotNoDed0;
+				ivaAcred = ivaAcred16 + ivaAcred8 + ivaAcred0;
+				ivaNoAcred = ivaNoAcred16 + ivaNoAcred8 + ivaNoAcred0;
+	
+				subtotGral = subtotDed + subtotNoDed;
+				ivaGral = ivaAcred + ivaNoAcred;
+				TotalGral = subtotGral + ivaGral;
+				
+				console.log('====== tope ' + tope);
+
+				console.log('subtotDed16 ' + subtotDed16);
+				console.log('subtotNoDed16 ' + subtotNoDed16);
+				console.log('subtotDed8 ' + subtotDed8);
+				console.log('subtotNoDed8 ' + subtotNoDed8);
+				console.log('subtotDed0 ' + subtotDed0);
+				console.log('subtotNoDed0 ' + subtotNoDed0);
+				console.log('ivaAcred16 ' + ivaAcred16);
+				console.log('ivaNoAcred16 ' + ivaNoAcred16);
+				console.log('ivaAcred8 ' + ivaAcred8);
+				console.log('ivaNoAcred8 ' + ivaNoAcred8);
+				console.log('ivaAcred0 ' + ivaAcred0);
+				console.log('ivaNoAcred0 ' + ivaNoAcred0);
+				console.log('========== ');
+				console.log('subtotDed ' + subtotDed);
+				console.log('subtotNoDed ' + subtotNoDed);
+				console.log('ivaAcred ' + ivaAcred);
+				console.log('ivaNoAcred ' + ivaNoAcred);
+				console.log('========== ');
+				console.log('subtotGral ' + subtotGral);
+				console.log('ivaGral ' + ivaGral);
+				console.log('TotalGral ' + TotalGral);
 			}
-			if((subTot8 + yadeducible) < tope)
-			{
-				subtotDed8 = subTot8;
-				yadeducible += subtotDed8;
-				subtotNoDed8 = 0;
-			}
-			if((subTot8 + yadeducible) > tope)
-			{
-				subtotDed8 =  tope - yadeducible;
-				yadeducible = tope;
-				subtotNoDed8 = subTot8 - subtotDed8;
-			}
-
-			if((subTot0 + yadeducible) == tope)
-			{
-				subtotDed0 = subTot0;
-				yadeducible += subtotDed0;
-				subtotNoDed0 = 0;
-			}
-			if((subTot0 + yadeducible) < tope)
-			{
-				subtotDed0 = subTot0;
-				yadeducible += subtotDed0;
-				subtotNoDed0 = 0;
-			}
-			if((subTot0 + yadeducible) > tope)
-			{
-				subtotDed0 =  tope - yadeducible;
-				yadeducible = tope;
-				subtotNoDed0 = subTot0 - subtotDed0;
-			}
-
-			ivaAcred16 = subtotDed16 * 0.16;
-			ivaNoAcred16 = subtotNoDed16 * 0.16;
-			ivaAcred8 = subtotDed8 * 0.08;
-			ivaNoAcred8 = subtotNoDed8 * 0.08;
-			ivaAcred0 = subtotDed0 * 0.0;
-			ivaNoAcred0 = subtotNoDed0 * 0.0;
-
-			subtotDed = subtotDed16 + subtotDed8 + subtotDed0;
-			subtotNoDed = subtotNoDed16 + subtotNoDed8 + subtotNoDed0;
-			ivaAcred = ivaAcred16 + ivaAcred8 + ivaAcred0;
-			ivaNoAcred = ivaNoAcred16 + ivaNoAcred8 + ivaNoAcred0;
-
-			subtotGral = subtotDed + subtotNoDed;
-			ivaGral = ivaAcred + ivaNoAcred;
-			TotalGral = subtotGral + ivaGral;
-
-
-			console.log('subtotDed16 ' + subtotDed16);
-			console.log('subtotNoDed16 ' + subtotNoDed16);
-			console.log('subtotDed8 ' + subtotDed8);
-			console.log('subtotNoDed8 ' + subtotNoDed8);
-			console.log('subtotDed0 ' + subtotDed0);
-			console.log('subtotNoDed0 ' + subtotNoDed0);
-			console.log('ivaAcred16 ' + ivaAcred16);
-			console.log('ivaNoAcred16 ' + ivaNoAcred16);
-			console.log('ivaAcred8 ' + ivaAcred8);
-			console.log('ivaNoAcred8 ' + ivaNoAcred8);
-			console.log('ivaAcred0 ' + ivaAcred0);
-			console.log('ivaNoAcred0 ' + ivaNoAcred0);
-			console.log('========== ');
-			console.log('subtotDed ' + subtotDed);
-			console.log('subtotNoDed ' + subtotNoDed);
-			console.log('ivaAcred ' + ivaAcred);
-			console.log('ivaNoAcred ' + ivaNoAcred);
-			console.log('========== ');
-			console.log('subtotGral ' + subtotGral);
-			console.log('ivaGral ' + ivaGral);
-			console.log('TotalGral ' + TotalGral);
-
 		}
 
 		remamente = (totalFact - ((otro_subtot + otro_iva) + (subtot + iva))).toFixed(2); //Se determina si existe algun remanente de la suma de los IVAS y Subtotales contra el Total Neto del Comprobante
@@ -2499,10 +2395,19 @@ function sumaMontos(tipoGasto)
 		document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaAcre').value = dosDecim(ivaAcred);
 		document.getElementById('tipo'+tipoGasto+'_fact'+i+'_noded').value = dosDecim(subtotNoDed);
 		document.getElementById('tipo'+tipoGasto+'_fact'+i+'_ivaNoAcre').value = dosDecim(ivaNoAcred);
-		actualizaKW('posicion', tipoGasto, handle, 'ded', dosDecim(subtotDed));
-		actualizaKW('posicion', tipoGasto, handle, 'ivaAcre', dosDecim(ivaAcred));
-		actualizaKW('posicion', tipoGasto, handle, 'noDed', dosDecim(subtotNoDed));
-		actualizaKW('posicion', tipoGasto, handle, 'ivaNoAcre', dosDecim(ivaNoAcred));
+
+		actualizaKW('posicion', tipoGasto, handle, 'ded16', dosDecim(subtotDed16));
+		actualizaKW('posicion', tipoGasto, handle, 'noDed16', dosDecim(subtotNoDed16));
+		actualizaKW('posicion', tipoGasto, handle, 'ivaAcre16', dosDecim(ivaAcred16));
+		actualizaKW('posicion', tipoGasto, handle, 'ivaNoAcre16', dosDecim(ivaNoAcred16));
+		actualizaKW('posicion', tipoGasto, handle, 'ded8', dosDecim(subtotDed8));
+		actualizaKW('posicion', tipoGasto, handle, 'noDed8', dosDecim(subtotNoDed8));
+		actualizaKW('posicion', tipoGasto, handle, 'ivaAcre8', dosDecim(ivaAcred8));
+		actualizaKW('posicion', tipoGasto, handle, 'ivaNoAcre8', dosDecim(ivaNoAcred8));
+		actualizaKW('posicion', tipoGasto, handle, 'ded0', dosDecim(subtotDed0));
+		actualizaKW('posicion', tipoGasto, handle, 'noDed0', dosDecim(subtotNoDed0));
+		actualizaKW('posicion', tipoGasto, handle, 'ivaAcre0', dosDecim(ivaAcred0));
+		actualizaKW('posicion', tipoGasto, handle, 'ivaNoAcre0', dosDecim(ivaNoAcred0));
 
 		switch(tipoG)
 		{
@@ -2706,18 +2611,6 @@ function actualizaKW(tabla, tipoGasto, handle, kw, valor)
 						case 'RegNoC': //Modifica la KW Pos_ReglaNoCumple dentro del KWTG
 							document.getElementById('OBKey__621_'+i).value = valor;
 						break;
-						case 'ded': //Modifica la KW Pos_Deducible dentro del KWTG
-							document.getElementById('OBKey__623_'+i).value = valor;
-						break;
-						case 'noDed': //Modifica la KW Pos_NoDeducible dentro del KWTG
-							document.getElementById('OBKey__624_'+i).value = valor;
-						break;
-						case 'ivaAcre': //Modifica la KW Pos_IVAacredit dentro del KWTG
-							document.getElementById('OBKey__625_'+i).value = valor;
-						break;
-						case 'ivaNoAcre': //Modifica la KW Pos_IVAnoAcredit dentro del KWTG
-							document.getElementById('OBKey__626_'+i).value = valor;
-						break;
 						case 'impLoc': //Modifica la KW Pos_ImpLocal dentro del KWTG
 							document.getElementById('OBKey__627_'+i).value = valor;
 						break;
@@ -2726,6 +2619,42 @@ function actualizaKW(tabla, tipoGasto, handle, kw, valor)
 						break;
 						case 'remamente': //Modifica la KW Pos_Remanente dentro del KWTG
 							document.getElementById('OBKey__638_'+i).value = valor;
+						break;
+						case 'ded16': //Modifica la KW Pos_Deducible dentro del KWTG
+							document.getElementById('OBKey__623_'+i).value = valor;
+						break;
+						case 'noDed16': //Modifica la KW Pos_NoDeducible dentro del KWTG
+							document.getElementById('OBKey__624_'+i).value = valor;
+						break;
+						case 'ivaAcre16': //Modifica la KW Pos_IVAacredit dentro del KWTG
+							document.getElementById('OBKey__625_'+i).value = valor;
+						break;
+						case 'ivaNoAcre16': //Modifica la KW Pos_IVAnoAcredit dentro del KWTG
+							document.getElementById('OBKey__626_'+i).value = valor;
+						break;
+						case 'ded8': //Modifica la KW Pos_Deducible dentro del KWTG
+							document.getElementById('OBKey__1297_'+i).value = valor;
+						break;
+						case 'noDed8': //Modifica la KW Pos_NoDeducible dentro del KWTG
+							document.getElementById('OBKey__1299_'+i).value = valor;
+						break;
+						case 'ivaAcre8': //Modifica la KW Pos_IVAacredit dentro del KWTG
+							document.getElementById('OBKey__1301_'+i).value = valor;
+						break;
+						case 'ivaNoAcre8': //Modifica la KW Pos_IVAnoAcredit dentro del KWTG
+							document.getElementById('OBKey__1303_'+i).value = valor;
+						break;
+						case 'ded0': //Modifica la KW Pos_Deducible dentro del KWTG
+							document.getElementById('OBKey__1298_'+i).value = valor;
+						break;
+						case 'noDed0': //Modifica la KW Pos_NoDeducible dentro del KWTG
+							document.getElementById('OBKey__1300_'+i).value = valor;
+						break;
+						case 'ivaAcre0': //Modifica la KW Pos_IVAacredit dentro del KWTG
+							document.getElementById('OBKey__1302_'+i).value = valor;
+						break;
+						case 'ivaNoAcre0': //Modifica la KW Pos_IVAnoAcredit dentro del KWTG
+							document.getElementById('OBKey__1304_'+i).value = valor;
 						break;
 					}
 					break;
