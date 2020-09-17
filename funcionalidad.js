@@ -58,7 +58,7 @@ Se muestran en la marca de agua al pie del Formulario
 10/05/2019 18:41 = Sebastian Ruiz - Ajuste JS para discriminar los impuestos trasladados de la factura siempre igual a 002 correspondiente a IVA y omitir otros impuestos como IEPS
 14/05/2019 16:08 = Sebastian Ruiz - Ajuste JS para controlar en Tipo Gastos 10 (Renta de Auto) si la factura tiene IVA en 0, no realice el calculo de IVA Acreditable por monto o porcentaje
 */
-var versionJS = '04/09/2020 23:30 '; //Ultima modificación de este archivo JS 
+var versionJS = '10/09/2020 22:37 '; //Ultima modificación de este archivo JS 
 var versionFormOB = 'V 1.0 09052018'; //Ultima versión del SYS HTML FORM asignado a DT en OnBase
 
 //Los siguientes arrays son cargados en memoria en cada carga del formulario para control de las funciones de mas adelante
@@ -1904,8 +1904,7 @@ function sumaMontos(tipoGasto)
 	var kmsGasolinaAnio = document.getElementById('OBKey__654_1').value; //Obtiene la KW Pol_TopeGasAño general en el DT, proveniente del AFKS GV - ControlAnual Kms Gasolina el cual contiene una actualización por empleado de la cantidad de Kms comprobados a lo largo del Año
 	//Declara variables con ambito de la función para el control de datos mas adelante. 
 	var topeFisEfectivo;
-	var destinoViaje;
-	var destinoCiudad;
+	var destinoViaje;	var destinoCiudad;
 	var pol_destino;
 	var pol_nivel;
 	var pol_TopeFiscNac;
@@ -2173,13 +2172,14 @@ function sumaMontos(tipoGasto)
 				}
 			}
 
-			console.log('Montos de Conceptos para Factura ' + i + ' Handle ' + handle);
+			/*console.log('Montos de Conceptos para Factura ' + i + ' Handle ' + handle);
 			console.log('handle ' + handle + ' tipoG ' + tipoG + ' subTot16 ' + subTot16);
 			console.log('handle ' + handle + ' tipoG ' + tipoG + ' subTot8 ' + subTot8);
 			console.log('handle ' + handle + ' tipoG ' + tipoG + ' subTot0 ' + subTot0);
 			console.log('handle ' + handle + ' tipoG ' + tipoG + ' mtoIva16 ' + mtoIva16);
 			console.log('handle ' + handle + ' tipoG ' + tipoG + ' mtoIva8 ' + mtoIva8);
 			console.log('handle ' + handle + ' tipoG ' + tipoG + ' mtoIva0 ' + mtoIva0);
+			*/
 
 			calcular = true;
 
@@ -2198,7 +2198,7 @@ function sumaMontos(tipoGasto)
 				else
 				{
 					tope = kms * pol_TopeFiscNac;
-					console.log('Tipo 8 con tope ' + tope + ' kms ' + kms);
+					//console.log('Tipo 8 con tope ' + tope + ' kms ' + kms);
 				}
 			}
 			else if(tipoG==17)
@@ -2252,61 +2252,61 @@ function sumaMontos(tipoGasto)
 			{
 				var yadeducible = 0.0;
 
-				if(subTot16 == tope)
-				{
-					subtotDed16 = subTot16;
-					yadeducible = tope;
-					subtotNoDed16 = 0;
-				}
 				if(subTot16 < tope)
 				{
 					subtotDed16 = subTot16;
 					yadeducible = subtotDed16;
 					subtotNoDed16 = 0;
 				}
-				if(subTot16 > tope)
+				else if(subTot16 > tope)
 				{
 					subtotDed16 = tope;
 					yadeducible = subtotDed16;
 					subtotNoDed16 = subTot16 - subtotDed16;
 				}
-	
-				if((subTot8 + yadeducible) == tope)
+				else(subTot16 == tope)
 				{
-					subtotDed8 = subTot8;
-					yadeducible += subtotDed8;
-					subtotNoDed8 = 0;
+					subtotDed16 = subTot16;
+					yadeducible = tope;
+					subtotNoDed16 = 0;
 				}
+
 				if((subTot8 + yadeducible) < tope)
 				{
 					subtotDed8 = subTot8;
 					yadeducible += subtotDed8;
 					subtotNoDed8 = 0;
 				}
-				if((subTot8 + yadeducible) > tope)
+				else if((subTot8 + yadeducible) > tope)
 				{
 					subtotDed8 =  tope - yadeducible;
 					yadeducible = tope;
 					subtotNoDed8 = subTot8 - subtotDed8;
 				}
-	
-				if((subTot0 + yadeducible) == tope)
+				else((subTot8 + yadeducible) == tope)
 				{
-					subtotDed0 = subTot0;
-					yadeducible += subtotDed0;
-					subtotNoDed0 = 0;
+					subtotDed8 = subTot8;
+					yadeducible += subtotDed8;
+					subtotNoDed8 = 0;
 				}
+
 				if((subTot0 + yadeducible) < tope)
 				{
 					subtotDed0 = subTot0;
 					yadeducible += subtotDed0;
 					subtotNoDed0 = 0;
 				}
-				if((subTot0 + yadeducible) > tope)
+				else if((subTot0 + yadeducible) > tope)
 				{
 					subtotDed0 =  tope - yadeducible;
 					yadeducible = tope;
 					subtotNoDed0 = subTot0 - subtotDed0;
+				}
+				else((subTot0 + yadeducible) == tope)
+				{
+					subtotDed0 = subTot0;
+					yadeducible += subtotDed0;
+					subtotNoDed0 = 0;
 				}
 	
 				ivaAcred16 = subtotDed16 * 0.16;
@@ -2325,7 +2325,7 @@ function sumaMontos(tipoGasto)
 				ivaGral = ivaAcred + ivaNoAcred;
 				TotalGral = subtotGral + ivaGral;
 				
-				console.log('====== tope ' + tope);
+				/*console.log('====== tope ' + tope);
 
 				console.log('subtotDed16 ' + subtotDed16);
 				console.log('subtotNoDed16 ' + subtotNoDed16);
@@ -2347,7 +2347,7 @@ function sumaMontos(tipoGasto)
 				console.log('========== ');
 				console.log('subtotGral ' + subtotGral);
 				console.log('ivaGral ' + ivaGral);
-				console.log('TotalGral ' + TotalGral);
+				console.log('TotalGral ' + TotalGral);*/
 			}
 		}
 
@@ -2412,7 +2412,7 @@ function sumaMontos(tipoGasto)
 		switch(tipoG)
 		{
 			case 1:
-
+				//alert('case 1');
 				break;
 			default:
 				actualizaKW('posicion', tipoGasto, handle, 'impLoc', 0);
