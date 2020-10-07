@@ -2126,6 +2126,15 @@ function sumaMontos(tipoGasto)
 						var tasa = parseFloat(document.getElementById('OBKey__505_'+r).value);
 						var impConcepto = parseFloat(document.getElementById('OBKey__195_'+r).value);
 						var impIva = parseFloat(document.getElementById('OBKey__504_'+r).value);
+						var descuento = document.getElementById('OBKey__750_'+r).value;
+						var mtoConcepto = 0.0;
+						
+						mtoConcepto = impConcepto;
+
+						if (descuento!="")
+						{
+							mtoConcepto = impConcepto - parseFloat(descuento);
+						}
 
 						if(tipoGasto==tGastoItem) //Valida si el Tipo de Gasto del Concepto encontrado con el mismo Handle es igual al Tipo de Gasto del CFDI principal
 						{
@@ -2140,17 +2149,17 @@ function sumaMontos(tipoGasto)
 							switch (tasa)
 							{
 								case 0.16:
-									subTot16 += impConcepto;
+									subTot16 += mtoConcepto;
 									mtoIva16 += impIva;
 								break;
 
 								case 0.08:
-									subTot8 += impConcepto;
+									subTot8 += mtoConcepto;
 									mtoIva8 += impIva;
 								break;
 
 								case 0:
-									subTot0 += impConcepto;
+									subTot0 += mtoConcepto;
 									mtoIva0 += impIva;
 								break;
 							}
